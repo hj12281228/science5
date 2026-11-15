@@ -1,0 +1,36 @@
+{
+  "lab_a": {
+    "lab_name": "DIML (연세대)",
+    "professor_id": "A1",
+    "works": [
+      {
+        "publication_year": 2025,
+        "authorships": [
+          {"author": {"id": "A1", "display_name": "손광훈"}, "institutions": [{"display_name": "Yonsei"}]},
+          {"author": {"id": "S1", "display_name": "학생1"}, "institutions": [{"display_name": "Yonsei"}]},
+          {"author": {"id": "S2", "display_name": "학생2"}, "institutions": [{"display_name": "Yonsei"}]}
+        ]
+      },
+      {
+        "publication_year": 2024,
+        "authorships": [
+          {"author": {"id": "A1", "display_name": "손광훈"}, "institutions": [{"display_name": "Yonsei"}]},
+          {"author": {"id": "S1", "display_name": "학생1"}, "institutions": [{"display_name": "Yonsei"}]}
+        ]
+      }
+    ]
+  },
+  "lab_b": {
+    "lab_name": "CV Lab (연세대)",
+    "professor_id": "B1",
+    "works": [
+      {
+        "publication_year": 2025,
+        "authorships": [
+          {"author": {"id": "B1", "display_name": "함범섭"}, "institutions": [{"display_name": "Yonsei"}]},
+          {"author": {"id": "S3", "display_name": "학생3"}, "institutions": [{"display_name": "Yonsei"}]}
+        ]
+      }
+    ]
+  }
+}
