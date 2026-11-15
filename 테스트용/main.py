@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 import streamlit as st
 
 # 조원들이 보내준 4개의 지표 함수 불러오기
@@ -42,7 +43,8 @@ if "summary_2" not in st.session_state:
     st.session_state.summary_2 = ""
 
 # 목업 데이터 로드 (모든 조원 코드가 이 데이터를 가져다 씀)
-with open("mock_lab_data.json", encoding="utf-8") as f:
+DATA_PATH = Path(__file__).parent / "mock_lab_data.json"
+with open(DATA_PATH, encoding="utf-8") as f:
     data = json.load(f)
 
 # =========================================================
