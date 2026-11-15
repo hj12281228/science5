@@ -1,6 +1,5 @@
 import streamlit as st
 import requests
-import json
 from pathlib import Path
 
 # 조원들이 보내준 4개의 지표 함수 불러오기
@@ -10,7 +9,7 @@ from practice4 import render_lab_size
 from practice5 import render_continuity
 
 # =========================================================
-# [엔진 1] 동명이인 검색용 함수 (이름 -> 후보 5명 리스트 반환)
+# [엔진 1] 동명이인 검색용 함수
 # =========================================================
 @st.cache_data(show_spinner=False, ttl=3600)
 def search_author_candidates(query_name):
@@ -19,7 +18,6 @@ def search_author_candidates(query_name):
     candidates = []
     
     for author in res.get("results", []):
-        # 소속 기관 정보 추출
         inst = "소속 정보 없음"
         if author.get("last_known_institution"):
             inst = author["last_known_institution"].get("display_name", "소속 정보 없음")
@@ -42,15 +40,10 @@ def fetch_openalex_lab_data_by_id(author_id, author_name):
     raw_works = works_res.get("results", [])
 
     lab_dict = {
-        "lab_name": f"{author_name} 연구실",
-        "professor_id": author_id,
-        "professor": author_name,
-        "total_papers": len(raw_works),
-        "collaboration": {"external_papers": 0, "industry_papers": 0, "industry_partners": []},
-        "works": [],
-        "interdisciplinarity_demo_papers": []
+        "lab_name": f"{author_name} 연구실", "professor_id": author_id, "professor": author_name,
+        "total_papers": len(raw_works), "collaboration": {"external_papers": 0, "industry_papers": 0, "industry_partners": []},
+        "works": [], "interdisciplinarity_demo_papers": []
     }
-
     industry_partners = set()
 
     for w in raw_works:
@@ -58,15 +51,9 @@ def fetch_openalex_lab_data_by_id(author_id, author_name):
         pub_date = w.get("publication_date")
         authorships = w.get("authorships", [])
 
-        lab_dict["works"].append({
-            "id": w["id"], "year": year, "publication_year": year, 
-            "publication_date": pub_date, "authorships": authorships
-        })
-
+        lab_dict["works"].append({"id": w["id"], "year": year, "publication_year": year, "publication_date": pub_date, "authorships": authorships})
         concepts = [c["display_name"] for c in w.get("concepts", []) if c.get("level", 1) == 0]
-        lab_dict["interdisciplinarity_demo_papers"].append({
-            "id": w["id"], "title": w.get("title", ""), "year": year, "field_ids": concepts
-        })
+        lab_dict["interdisciplinarity_demo_papers"].append({"id": w["id"], "title": w.get("title", ""), "year": year, "field_ids": concepts})
 
         is_external = False
         is_industry = False
@@ -77,15 +64,12 @@ def fetch_openalex_lab_data_by_id(author_id, author_name):
                         is_external = True
                         if inst.get("type") == "company":
                             is_industry = True
-                            if inst.get("display_name"):
-                                industry_partners.add(inst.get("display_name"))
-        
+                            if inst.get("display_name"): industry_partners.add(inst.get("display_name"))
         if is_external: lab_dict["collaboration"]["external_papers"] += 1
         if is_industry: lab_dict["collaboration"]["industry_papers"] += 1
 
     lab_dict["collaboration"]["industry_partners"] = list(industry_partners)
     return lab_dict
-
 
 # 1. 기본 페이지 설정
 st.set_page_config(page_title="LABMATCH", layout="wide")
@@ -98,7 +82,7 @@ st.markdown(
     </style>""", unsafe_allow_html=True
 )
 
-# 3. Session State 초기화 (4단계로 확장)
+# 3. Session State 초기화
 if "step" not in st.session_state: st.session_state.step = 1
 if "query_a" not in st.session_state: st.session_state.query_a = "Kwanghoon Sohn"
 if "query_b" not in st.session_state: st.session_state.query_b = "Bumsub Ham"
@@ -108,15 +92,28 @@ if "data_a" not in st.session_state: st.session_state.data_a = None
 if "data_b" not in st.session_state: st.session_state.data_b = None
 if "summary_2" not in st.session_state: st.session_state.summary_2 = ""
 
-# 공통 상단 바
+# =========================================================
+# [공통 상단 바] UI/UX 피드백 반영
+# =========================================================
 top_spacer, top_btn1, top_btn2 = st.columns([6.5, 1.7, 1.8])
 with top_btn1:
-    with st.popover("📊 체감 지표 안내", use_container_width=True):
-        st.write("1. 탑티어 논문 비중\n2. 산학/외부 협업 비율\n3. 학제 간 융합도\n4. 연구실 규모\n5. 연구 산출 연속성")
+    with st.popover("📊 5대 핵심 체감 지표 안내", use_container_width=True):
+        st.markdown("""
+        | 지표명 | 이용자 관점 질문 | 화면 시각화 안내 |
+        |---|---|---|
+        | **1. 탑티어 논문 비중** | 유명한 학회/저널에 논문을 자주 내는가? | 🏆 (연결 예정) |
+        | **2. 산학/외부 협업** | 기업 과제 or 학술 연구 중심인가? | 📊 막대 그래프 + 태그 |
+        | **3. 학제 간 융합도** | 타 전공 출신도 적응할 수 있는가? | 🔗 생키 다이어그램 |
+        | **4. 연구실 규모** | 연구실에 질문할 사수가 몇 명인가? | 👥 사람 아이콘 그리드 |
+        | **5. 연구 산출 연속성** | 논문이 끊김 없이 꾸준히 나오는가? | 🚦 신호등 배지 + 꺾은선 |
+        """)
 with top_btn2:
-    with st.popover("⚠️ 주의 사항", use_container_width=True):
-        st.write("• **검색 정확도:** OpenAlex 글로벌 DB를 사용하므로 영문 검색을 권장합니다.\n• **동명이인 방어:** 검색 후 소속 기관(University)을 직접 확인하고 선택할 수 있도록 설계되었습니다.")
-
+    with st.popover("⚠️ 분석 시 주의 사항 및 한계점", use_container_width=True):
+        st.markdown("""
+        - **동명이인 (저자 식별):** 글로벌 DB 특성상 동명이인이 혼재할 수 있어, 검색 후 소속 기관명으로 교차 검증하는 과정이 포함되어 있습니다.
+        - **영문 검색 원칙:** 기계 번역과 실제 공식 논문 영문명의 불일치를 막고자 영문 검색을 원칙으로 합니다.
+        - **빠른 시연을 위한 제한:** 웹사이트 과부하 방지 및 쾌적한 데모를 위해 연구자별 **최근 논문 100편**으로 분석 범위를 제한했습니다.
+        """)
 
 # =========================================================
 # [STEP 1] 검색어 입력
@@ -128,58 +125,52 @@ if st.session_state.step == 1:
         st.markdown("<h1 style='text-align: center; font-size: 60px; margin-bottom: 0px;'>🔬 LABMATCH</h1>", unsafe_allow_html=True)
         st.markdown("<p style='text-align: center; font-size: 18px; color: #94A3B8; margin-bottom: 35px;'>예비 대학원생을 위한 연구실 1:1 체감 지표 비교 플랫폼</p>", unsafe_allow_html=True)
 
-        lab_a_input = st.text_input("첫 번째 교수님 영문 성함 입력", value=st.session_state.query_a)
-        lab_b_input = st.text_input("두 번째 교수님 영문 성함 입력", value=st.session_state.query_b)
+        lab_a_input = st.text_input("첫 번째 교수님 성함 입력", value=st.session_state.query_a)
+        lab_b_input = st.text_input("두 번째 교수님 성함 입력", value=st.session_state.query_b)
         st.write("\n\n")
 
         if st.button("🔍 동명이인 확인 및 교수님 검색", use_container_width=True):
             if not lab_a_input.strip() or not lab_b_input.strip():
                 st.error("⚠️ 교수님 성함을 모두 입력해 주세요!")
             else:
-                st.session_state.query_a = lab_a_input.strip()
-                st.session_state.query_b = lab_b_input.strip()
+                name_map = {"손광훈": "Kwanghoon Sohn", "함범섭": "Bumsub Ham"}
+                query_a_eng = name_map.get(lab_a_input.strip(), lab_a_input.strip())
+                query_b_eng = name_map.get(lab_b_input.strip(), lab_b_input.strip())
+                
+                st.session_state.query_a = query_a_eng
+                st.session_state.query_b = query_b_eng
                 
                 with st.spinner("글로벌 DB에서 해당하는 학자들을 찾고 있습니다..."):
-                    st.session_state.cands_a = search_author_candidates(st.session_state.query_a)
-                    st.session_state.cands_b = search_author_candidates(st.session_state.query_b)
+                    st.session_state.cands_a = search_author_candidates(query_a_eng)
+                    st.session_state.cands_b = search_author_candidates(query_b_eng)
                 st.session_state.step = 2
                 st.rerun()
 
-
 # =========================================================
-# [STEP 2] 동명이인 걸러내기 (후보 선택 UI)
+# [STEP 2] 동명이인 걸러내기 및 에러 친절 피드백
 # =========================================================
 elif st.session_state.step == 2:
     st.title("🔎 정확한 교수님을 선택해 주세요 (동명이인 방지)")
-    st.caption("OpenAlex DB에서 검색된 학자들입니다. 소속 대학과 누적 논문 수를 확인하고 올바른 교수님을 선택하세요.")
+    st.caption("OpenAlex DB에서 검색된 학자들입니다. 소속 대학을 확인하고 올바른 교수님을 선택하세요.")
     
     col1, col2 = st.columns(2)
-    
-    # A 교수님 선택 라디오 버튼 생성
     with col1:
         st.subheader(f"1️⃣ '{st.session_state.query_a}' 검색 결과")
         if not st.session_state.cands_a:
-            st.error("검색 결과가 없습니다. 영문 스펠링을 확인해주세요.")
+            st.error("💡 **검색 결과가 없습니다.**\n\n- 논문에 기재된 공식 영문 스펠링과 다를 수 있습니다.\n- 구글 스칼라 등에서 교수님의 정확한 영문 성함을 확인 후 다시 입력해 보세요.")
             sel_a = None
         else:
-            options_a = {
-                c["id"]: f"{c['name']} (소속: {c['institution']} / 논문: {c['works_count']}편)"
-                for c in st.session_state.cands_a
-            }
-            sel_a = st.radio("찾으시는 교수님을 선택하세요:", options=list(options_a.keys()), format_func=lambda x: options_a[x])
+            options_a = {c["id"]: f"{c['name']} (소속: {c['institution']} / 논문 {c['works_count']}편)" for c in st.session_state.cands_a}
+            sel_a = st.radio("교수님을 선택하세요:", options=list(options_a.keys()), format_func=lambda x: options_a[x])
 
-    # B 교수님 선택 라디오 버튼 생성
     with col2:
         st.subheader(f"2️⃣ '{st.session_state.query_b}' 검색 결과")
         if not st.session_state.cands_b:
-            st.error("검색 결과가 없습니다. 영문 스펠링을 확인해주세요.")
+            st.error("💡 **검색 결과가 없습니다.**\n\n- 논문에 기재된 공식 영문 스펠링과 다를 수 있습니다.\n- 구글 스칼라 등에서 교수님의 정확한 영문 성함을 확인 후 다시 입력해 보세요.")
             sel_b = None
         else:
-            options_b = {
-                c["id"]: f"{c['name']} (소속: {c['institution']} / 논문: {c['works_count']}편)"
-                for c in st.session_state.cands_b
-            }
-            sel_b = st.radio("찾으시는 교수님을 선택하세요:", options=list(options_b.keys()), format_func=lambda x: options_b[x], key="radio_b")
+            options_b = {c["id"]: f"{c['name']} (소속: {c['institution']} / 논문 {c['works_count']}편)" for c in st.session_state.cands_b}
+            sel_b = st.radio("교수님을 선택하세요:", options=list(options_b.keys()), format_func=lambda x: options_b[x], key="radio_b")
 
     st.divider()
     btn_prev, btn_next = st.columns(2)
@@ -192,26 +183,20 @@ elif st.session_state.step == 2:
             if sel_a and sel_b:
                 name_a = [c["name"] for c in st.session_state.cands_a if c["id"] == sel_a][0]
                 name_b = [c["name"] for c in st.session_state.cands_b if c["id"] == sel_b][0]
-                
-                with st.spinner("선택하신 교수님의 최근 100편 논문을 수집해 분석 중입니다 (약 3~5초)..."):
+                with st.spinner("선택하신 교수님의 최근 100편 논문을 수집해 분석 중입니다..."):
                     st.session_state.data_a = fetch_openalex_lab_data_by_id(sel_a, name_a)
                     st.session_state.data_b = fetch_openalex_lab_data_by_id(sel_b, name_b)
-                
                 st.session_state.step = 3
                 st.rerun()
-
 
 # =========================================================
 # [STEP 3] 5대 핵심 체감 지표 분석
 # =========================================================
 elif st.session_state.step == 3:
     data_a, data_b = st.session_state.data_a, st.session_state.data_b
-
     st.title("📊 5대 핵심 체감 지표 비교")
-    st.caption(f"분석 대상: **{data_a['professor']}** vs **{data_b['professor']}**")
-
+    
     tab1, tab2, tab3, tab4, tab5 = st.tabs(["① 탑티어 비중", "② 산학/외부 협업", "③ 학제 간 융합도", "④ 연구실 규모·사수", "⑤ 연구 산출 연속성"])
-
     with tab1: st.info("🔧 1번 지표 연결 예정")
     with tab2:
         try:
@@ -235,16 +220,15 @@ elif st.session_state.step == 3:
             st.session_state.step = 2
             st.rerun()
     with col_next:
-        if st.button("📌 최종 Visual Brief 및 면담 질문 보기 ➡️", use_container_width=True):
+        if st.button("📌 최종 Visual Brief 리포트 다운로드 ➡️", use_container_width=True):
             st.session_state.step = 4
             st.rerun()
 
-
 # =========================================================
-# [STEP 4] 리포트 다운로드
+# [STEP 4] 리포트 다운로드 (PDF 오류 해결)
 # =========================================================
 elif st.session_state.step == 4:
-    st.title("📌 최종 비교 리포트 & 면담 질문 가이드")
+    st.title("📌 최종 비교 리포트 다운로드")
     st.divider()
 
     st.subheader("💡 맞춤형 Visual Brief")
@@ -254,13 +238,19 @@ elif st.session_state.step == 4:
     )
 
     st.divider()
+    st.markdown("**📂 다운로드 파일 포맷 안내**")
+    st.caption("기존에 PDF나 HWP 형식을 선택했을 때 파일이 깨지거나 열리지 않던 현상을 해결하기 위해, 텍스트가 완벽하게 호환되는 순수 텍스트(TXT)와 마크다운(MD) 형식으로 지원 포맷을 최적화했습니다.")
+    
     col_fmt, col_dl = st.columns([1, 2])
-    with col_fmt: file_format = st.selectbox("파일 형식", ["TXT (.txt)", "PDF (.pdf)", "DOCX (.docx)", "HWP (.hwp)"])
-    ext = {"TXT (.txt)": "txt", "PDF (.pdf)": "pdf", "DOCX (.docx)": "docx", "HWP (.hwp)": "hwp"}[file_format]
+    with col_fmt: 
+        file_format = st.selectbox("파일 형식", ["TXT (일반 텍스트)", "MD (마크다운 포맷)"])
+    
+    ext = "txt" if "TXT" in file_format else "md"
+    report_content = f"# LABMATCH 최종 리포트\n\n## 1. 요약 결과\n- {st.session_state.summary_2}\n\n## 2. 면담 질문 가이드\n- 사수 배정 및 프로젝트 진행 방식 확인\n- 신입생 연구 주제 선정 자율성 확인"
     
     with col_dl:
         st.write("")
-        st.download_button("📄 리포트 다운로드", data=f"요약: {st.session_state.summary_2}".encode("utf-8"), file_name=f"report.{ext}", use_container_width=True)
+        st.download_button(f"📄 {ext.upper()} 리포트 다운로드", data=report_content.encode("utf-8"), file_name=f"labmatch_report.{ext}", use_container_width=True)
 
     st.divider()
     if st.button("⬅️ 지표 화면으로 돌아가기", use_container_width=True):
