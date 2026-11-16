@@ -2,7 +2,8 @@ import streamlit as st
 import requests
 from pathlib import Path
 
-# 조원들이 보내준 4개의 지표 함수 불러오기
+# 조원들이 보내준 5개의 지표 함수 모두 불러오기!
+from practice1 import render_toptier
 from practice2 import render_industry_collab
 from practice3 import render_interdisciplinarity
 from practice4 import render_lab_size
@@ -42,7 +43,7 @@ def fetch_openalex_lab_data_by_id(author_id, author_name):
     lab_dict = {
         "lab_name": f"{author_name} 연구실", "professor_id": author_id, "professor": author_name,
         "total_papers": len(raw_works), "collaboration": {"external_papers": 0, "industry_papers": 0, "industry_partners": []},
-        "works": [], "interdisciplinarity_demo_papers": []
+        "works": [], "interdisciplinarity_demo_papers": [], "toptier_papers": []
     }
     industry_partners = set()
 
@@ -51,10 +52,21 @@ def fetch_openalex_lab_data_by_id(author_id, author_name):
         pub_date = w.get("publication_date")
         authorships = w.get("authorships", [])
 
+        # 지표 4, 5번 용
         lab_dict["works"].append({"id": w["id"], "year": year, "publication_year": year, "publication_date": pub_date, "authorships": authorships})
+        
+        # 지표 3번 용 (분야)
         concepts = [c["display_name"] for c in w.get("concepts", []) if c.get("level", 1) == 0]
         lab_dict["interdisciplinarity_demo_papers"].append({"id": w["id"], "title": w.get("title", ""), "year": year, "field_ids": concepts})
 
+        # 💡 지표 1번 용 (탑티어 판별을 위한 게재처 데이터 추출 추가)
+        venue_name = w.get("primary_location", {}).get("source", {})
+        venue_name = venue_name.get("display_name", "") if venue_name else ""
+        lab_dict["toptier_papers"].append({
+            "title": w.get("title", ""), "year": year, "venue": venue_name, "type": w.get("type", ""), "url": w.get("id", "")
+        })
+
+        # 지표 2번 용
         is_external = False
         is_industry = False
         for auth in authorships:
@@ -90,10 +102,11 @@ if "cands_a" not in st.session_state: st.session_state.cands_a = []
 if "cands_b" not in st.session_state: st.session_state.cands_b = []
 if "data_a" not in st.session_state: st.session_state.data_a = None
 if "data_b" not in st.session_state: st.session_state.data_b = None
+if "summary_1" not in st.session_state: st.session_state.summary_1 = ""
 if "summary_2" not in st.session_state: st.session_state.summary_2 = ""
 
 # =========================================================
-# [공통 상단 바] UI/UX 피드백 반영
+# [공통 상단 바]
 # =========================================================
 top_spacer, top_btn1, top_btn2 = st.columns([6.5, 1.7, 1.8])
 with top_btn1:
@@ -101,7 +114,7 @@ with top_btn1:
         st.markdown("""
         | 지표명 | 이용자 관점 질문 | 화면 시각화 안내 |
         |---|---|---|
-        | **1. 탑티어 논문 비중** | 유명한 학회/저널에 논문을 자주 내는가? | 🏆 (연결 예정) |
+        | **1. 탑티어 논문 비중** | 유명한 학회/저널에 논문을 자주 내는가? | 🏆 도넛형 차트 + 피라미드 |
         | **2. 산학/외부 협업** | 기업 과제 or 학술 연구 중심인가? | 📊 막대 그래프 + 태그 |
         | **3. 학제 간 융합도** | 타 전공 출신도 적응할 수 있는가? | 🔗 생키 다이어그램 |
         | **4. 연구실 규모** | 연구실에 질문할 사수가 몇 명인가? | 👥 사람 아이콘 그리드 |
@@ -157,7 +170,7 @@ elif st.session_state.step == 2:
     with col1:
         st.subheader(f"1️⃣ '{st.session_state.query_a}' 검색 결과")
         if not st.session_state.cands_a:
-            st.error("💡 **검색 결과가 없습니다.**\n\n- 논문에 기재된 공식 영문 스펠링과 다를 수 있습니다.\n- 구글 스칼라 등에서 교수님의 정확한 영문 성함을 확인 후 다시 입력해 보세요.")
+            st.error("💡 **검색 결과가 없습니다.**\n\n- 논문에 기재된 공식 영문 스펠링과 다를 수 있습니다.\n- 구글 스칼라 등에서 정확한 영문 성함을 확인 후 다시 입력해 보세요.")
             sel_a = None
         else:
             options_a = {c["id"]: f"{c['name']} (소속: {c['institution']} / 논문 {c['works_count']}편)" for c in st.session_state.cands_a}
@@ -166,7 +179,7 @@ elif st.session_state.step == 2:
     with col2:
         st.subheader(f"2️⃣ '{st.session_state.query_b}' 검색 결과")
         if not st.session_state.cands_b:
-            st.error("💡 **검색 결과가 없습니다.**\n\n- 논문에 기재된 공식 영문 스펠링과 다를 수 있습니다.\n- 구글 스칼라 등에서 교수님의 정확한 영문 성함을 확인 후 다시 입력해 보세요.")
+            st.error("💡 **검색 결과가 없습니다.**\n\n- 논문에 기재된 공식 영문 스펠링과 다를 수 있습니다.\n- 구글 스칼라 등에서 정확한 영문 성함을 확인 후 다시 입력해 보세요.")
             sel_b = None
         else:
             options_b = {c["id"]: f"{c['name']} (소속: {c['institution']} / 논문 {c['works_count']}편)" for c in st.session_state.cands_b}
@@ -197,7 +210,15 @@ elif st.session_state.step == 3:
     st.title("📊 5대 핵심 체감 지표 비교")
     
     tab1, tab2, tab3, tab4, tab5 = st.tabs(["① 탑티어 비중", "② 산학/외부 협업", "③ 학제 간 융합도", "④ 연구실 규모·사수", "⑤ 연구 산출 연속성"])
-    with tab1: st.info("🔧 1번 지표 연결 예정")
+    
+    with tab1: 
+        try:
+            res_1 = render_toptier(data_a, data_b)
+            # 탑티어 지표 요약 문장 조립
+            n_top_a = res_1["lab_a"]["n_top"]
+            n_top_b = res_1["lab_b"]["n_top"]
+            st.session_state.summary_1 = f"{data_a['professor']} 연구실은 최근 {n_top_a}편, {data_b['professor']} 연구실은 {n_top_b}편의 탑티어 논문을 게재했습니다."
+        except Exception as e: st.error(f"지표 1 오류: {e}")
     with tab2:
         try:
             res_2 = render_industry_collab(data_a, data_b)
@@ -233,8 +254,9 @@ elif st.session_state.step == 4:
 
     st.subheader("💡 맞춤형 Visual Brief")
     st.success(
-        "1. **연구실 규모:** 구체적인 인원과 협업 방식을 데이터로 확인했습니다.\n"
-        f"2. **산학/외부 협업:** {st.session_state.summary_2 if st.session_state.summary_2 else '데이터 산출 완료'}\n"
+        f"1. **연구 역량:** {st.session_state.summary_1}\n"
+        "2. **연구실 규모:** 구체적인 인원과 협업 방식을 데이터로 확인했습니다.\n"
+        f"3. **산학/외부 협업:** {st.session_state.summary_2 if st.session_state.summary_2 else '데이터 산출 완료'}\n"
     )
 
     st.divider()
@@ -246,7 +268,7 @@ elif st.session_state.step == 4:
         file_format = st.selectbox("파일 형식", ["TXT (일반 텍스트)", "MD (마크다운 포맷)"])
     
     ext = "txt" if "TXT" in file_format else "md"
-    report_content = f"# LABMATCH 최종 리포트\n\n## 1. 요약 결과\n- {st.session_state.summary_2}\n\n## 2. 면담 질문 가이드\n- 사수 배정 및 프로젝트 진행 방식 확인\n- 신입생 연구 주제 선정 자율성 확인"
+    report_content = f"# LABMATCH 최종 리포트\n\n## 1. 요약 결과\n- {st.session_state.summary_1}\n- {st.session_state.summary_2}\n\n## 2. 면담 질문 가이드\n- 사수 배정 및 프로젝트 진행 방식 확인\n- 신입생 연구 주제 선정 자율성 확인"
     
     with col_dl:
         st.write("")
