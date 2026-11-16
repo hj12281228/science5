@@ -1,12 +1,12 @@
 """LABMATCH 학제 간 융합도.
 
-render_interdisciplinarity(data)는 json.load()로 읽은 dict를 받는다.
+render_interdisciplinarity(data)는 통합 앱 또는 JSON에서 전달한 dict를 받는다.
 팀 공통 형식은 lab_A, lab_B의 lab_name과 interdisciplinarity_demo_papers를 사용한다.
 가상 표본 배열에는 id, year, field_ids만 필요하다. 배열이 없으면 산출 불가로 표시한다.
 공통 논문 건수와 키워드는 융합도 산출에 사용하지 않는다.
 
 기존 입력 형식도 지원한다. 이 형식의 필수 최상위 키는 source, labs다.
-source: kind("mock" 또는 "public"), name, taxonomy. public에는 retrieved_at 추가.
+source: kind("mock" 또는 "public"), name, taxonomy. 수집일을 아는 경우 retrieved_at 추가.
 labs: id, name, papers를 가진 연구실 목록.
 papers: id, title, year(정수), field_ids(중복 없는 분야명/ID 문자열 목록).
 field_ids는 같은 분류 체계의 같은 계층을 사용한다. 미분류는 []로 전달한다.
@@ -14,6 +14,7 @@ field_ids는 같은 분류 체계의 같은 계층을 사용한다. 미분류는
 """
 
 import json
+import re
 from collections import Counter
 from pathlib import Path
 
@@ -51,19 +52,44 @@ def _normalize_data(data):
         labs.append({
             "id": lab_id,
             "name": lab["lab_name"],
-            "papers": [
-                {**paper, "title": "가상 논문"} if isinstance(paper, dict) else paper
-                for paper in papers
-            ],
+            "papers": papers,
         })
-    return {
-        "source": {
+
+    if "source" in data:
+        source = data["source"]
+    elif all(
+        re.fullmatch(r"https://openalex\.org/A[0-9]+", str(data[lab["id"]].get("professor_id", "")))
+        and isinstance(data[lab["id"]].get("works"), list)
+        and "interdisciplinarity_demo_papers" in data[lab["id"]]
+        and all(
+            isinstance(paper, dict)
+            and re.fullmatch(r"https://openalex\.org/W[0-9]+", str(paper.get("id", "")))
+            for paper in lab["papers"]
+        )
+        for lab in labs
+    ):
+        source = {
+            "kind": "public",
+            "name": "OpenAlex",
+            "taxonomy": "OpenAlex 최상위 분야 (concepts, level 0)",
+        }
+    else:
+        source = {
             "kind": "mock",
             "name": "팀 공통 목업에 추가한 학제 간 융합도 표본",
             "taxonomy": "데모용 대분야 분류",
-        },
-        "labs": labs,
-    }
+        }
+
+    is_public = isinstance(source, dict) and source.get("kind") == "public"
+    fallback_title = "제목 정보 없음" if is_public else "가상 논문"
+    for lab in labs:
+        lab["papers"] = [
+            {**paper, "title": fallback_title}
+            if isinstance(paper, dict) and not _string(paper.get("title"))
+            else paper
+            for paper in lab["papers"]
+        ]
+    return {"source": source, "labs": labs}
 
 
 def validate(data):
@@ -76,7 +102,7 @@ def _validate_normalized(data):
     if not isinstance(source, dict) or source.get("kind") not in ("mock", "public"):
         raise ValueError("source.kind에 mock 또는 public을 지정하세요.")
     required = ["name", "taxonomy"]
-    if source["kind"] == "public":
+    if source["kind"] == "public" and "retrieved_at" in source:
         required.append("retrieved_at")
     if any(not _string(source.get(key)) for key in required):
         raise ValueError(f"source에 {', '.join(required)} 값을 지정하세요.")
@@ -179,7 +205,11 @@ def render_interdisciplinarity(data):
         st.warning(f"가상 데이터 데모 · {source['name']}")
         st.caption("화면의 수치와 그래프는 가상 논문 표본만으로 계산한 데모 결과입니다.")
     else:
-        st.info(f"공개 데이터 · {source['name']} · 수집일 {source['retrieved_at']}")
+        source_label = f"{source['name']} 공개 데이터"
+        if source.get("retrieved_at"):
+            source_label += f" · 수집일 {source['retrieved_at']}"
+        st.info(source_label)
+        st.caption("공개 출처에서 수집한 논문의 분야 분류를 바탕으로 수치와 그래프를 계산했습니다.")
     st.caption(f"분야 분류 기준 · {source['taxonomy']}")
     st.caption("융합도 = 2개 이상 분야로 분류된 논문 수 ÷ 분야 분류가 있는 논문 수 × 100")
 
@@ -218,7 +248,10 @@ def render_interdisciplinarity(data):
         if not stats["classified"]:
             st.info("선택 기간에 분야가 분류된 논문이 없어 융합도를 계산할 수 없습니다.")
         elif stats["classified"] < 10 or stats["coverage"] < 70:
-            st.warning("해석 주의 · 분류 논문 10편 미만 또는 분류율 70% 미만 (데모 기준)")
+            caution = "해석 주의 · 분류 논문 10편 미만 또는 분류율 70% 미만"
+            if source["kind"] == "mock":
+                caution += " (데모 기준)"
+            st.warning(caution)
 
         st.markdown("**연구 분야 변천**")
         if earlier["shares"] and later["shares"]:
