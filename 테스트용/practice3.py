@@ -55,6 +55,7 @@ def _normalize_data(data):
             "papers": papers,
         })
 
+    # [핵심] OpenAlex 실제 데이터와 가상 데이터 완벽 구분
     if "source" in data:
         source = data["source"]
     elif all(
@@ -219,10 +220,12 @@ def render_interdisciplinarity(data):
         return
 
     end = st.selectbox("비교 기준연도", years, index=len(years) - 1, key="labmatch_interdisciplinarity_year")
-    past_label = f"{end - 4}~{end - 2}"
-    recent_label = f"{end - 1}~{end}"
+    
+    # [버그 수정] Streamlit 취소선 방지를 위해 물결표(~)를 하이픈(-)으로 교체
+    past_label = f"{end - 4}-{end - 2}"
+    recent_label = f"{end - 1}-{end}"
     st.caption(
-        f"최근 5개 연도({end - 4}~{end})를 초기 3년({past_label})과 "
+        f"최근 5개 연도({end - 4}-{end})를 초기 3년({past_label})과 "
         f"최근 2년({recent_label})으로 나눠 기간별 분야 비중을 비교합니다."
     )
 
