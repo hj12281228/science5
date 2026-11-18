@@ -1,5 +1,6 @@
 import streamlit as st
 import requests
+import json
 from pathlib import Path
 
 # 조원들이 보내준 5개의 지표 함수 모두 불러오기
@@ -10,30 +11,65 @@ from practice4 import render_lab_size
 from practice5 import render_continuity
 
 # =========================================================
-# [엔진 1] 동명이인 검색용 함수
+# [데이터베이스] 연세대학교 교수진 DB 자동 생성 및 로드
+# =========================================================
+def load_professor_db():
+    db_path = Path("professors_db.json")
+    
+    # 파일이 없으면 초기 DB를 자동으로 만들어줍니다 (신뢰성 확보 및 관리 용이)
+    if not db_path.exists():
+        default_db = {
+            "인공지능융합대학": {
+                "인공지능학과": [
+                    {"name": "함범섭", "eng": "Bumsub Ham"},
+                    {"name": "황도식", "eng": "Dosik Hwang"}
+                ]
+            },
+            "공과대학": {
+                "전기전자공학부": [
+                    {"name": "손광훈", "eng": "Kwanghoon Sohn"}
+                ]
+            },
+            "문과대학": {
+                "문헌정보학과": [
+                    {"name": "송민", "eng": "Min Song"},
+                    {"name": "김기영", "eng": "Kiyoung Kim"},
+                    {"name": "주영준", "eng": "Youngjoon Joo"},
+                    {"name": "이지연", "eng": "Jiyeon Lee"},
+                    {"name": "김성언", "eng": "Seongeon Kim"}
+                ]
+            }
+        }
+        db_path.write_text(json.dumps(default_db, ensure_ascii=False, indent=4), encoding="utf-8")
+    
+    db_tree = json.loads(db_path.read_text(encoding="utf-8"))
+    
+    # 검색용 1차원 매핑 사전 자동 생성 (한글 -> 영문)
+    name_map = {}
+    for college, depts in db_tree.items():
+        for dept, profs in depts.items():
+            for p in profs:
+                name_map[p["name"]] = p["eng"]
+                
+    return db_tree, name_map
+
+# 앱 실행 시 DB 로드
+PROF_DB_TREE, PROF_NAME_MAP = load_professor_db()
+
+# =========================================================
+# [엔진 1, 2] OpenAlex 데이터 수집 (이전과 동일)
 # =========================================================
 @st.cache_data(show_spinner=False, ttl=3600)
 def search_author_candidates(query_name):
     search_url = f"https://api.openalex.org/authors?search={query_name}&per-page=5"
     res = requests.get(search_url).json()
     candidates = []
-    
     for author in res.get("results", []):
         inst = "소속 정보 없음"
-        if author.get("last_known_institution"):
-            inst = author["last_known_institution"].get("display_name", "소속 정보 없음")
-        
-        candidates.append({
-            "id": author["id"],
-            "name": author["display_name"],
-            "institution": inst,
-            "works_count": author.get("works_count", 0)
-        })
+        if author.get("last_known_institution"): inst = author["last_known_institution"].get("display_name", "소속 정보 없음")
+        candidates.append({"id": author["id"], "name": author["display_name"], "institution": inst, "works_count": author.get("works_count", 0)})
     return candidates
 
-# =========================================================
-# [엔진 2] 선택된 특정 교수님(ID)의 실시간 논문 100편 분석기
-# =========================================================
 @st.cache_data(show_spinner=False, ttl=3600)
 def fetch_openalex_lab_data_by_id(author_id, author_name):
     works_url = f"https://api.openalex.org/works?filter=author.id:{author_id}&sort=publication_year:desc&per-page=100"
@@ -53,18 +89,14 @@ def fetch_openalex_lab_data_by_id(author_id, author_name):
         authorships = w.get("authorships", [])
 
         lab_dict["works"].append({"id": w["id"], "year": year, "publication_year": year, "publication_date": pub_date, "authorships": authorships})
-        
         concepts = [c["display_name"] for c in w.get("concepts", []) if c.get("level", 1) == 0]
         lab_dict["interdisciplinarity_demo_papers"].append({"id": w["id"], "title": w.get("title", ""), "year": year, "field_ids": concepts})
 
         venue_name = w.get("primary_location", {}).get("source", {})
         venue_name = venue_name.get("display_name", "") if venue_name else ""
-        lab_dict["toptier_papers"].append({
-            "title": w.get("title", ""), "year": year, "venue": venue_name, "type": w.get("type", ""), "url": w.get("id", "")
-        })
+        lab_dict["toptier_papers"].append({"title": w.get("title", ""), "year": year, "venue": venue_name, "type": w.get("type", ""), "url": w.get("id", "")})
 
-        is_external = False
-        is_industry = False
+        is_external, is_industry = False, False
         for auth in authorships:
             if auth["author"]["id"] != author_id:
                 for inst in auth.get("institutions", []):
@@ -92,57 +124,40 @@ st.markdown(
 
 # 3. Session State 초기화
 if "step" not in st.session_state: st.session_state.step = 1
-if "query_a" not in st.session_state: st.session_state.query_a = ""
-if "query_b" not in st.session_state: st.session_state.query_b = ""
-if "cands_a" not in st.session_state: st.session_state.cands_a = []
-if "cands_b" not in st.session_state: st.session_state.cands_b = []
-if "data_a" not in st.session_state: st.session_state.data_a = None
-if "data_b" not in st.session_state: st.session_state.data_b = None
-if "summary_1" not in st.session_state: st.session_state.summary_1 = ""
-if "summary_2" not in st.session_state: st.session_state.summary_2 = ""
+for k in ["query_a", "query_b", "summary_1", "summary_2"]:
+    if k not in st.session_state: st.session_state[k] = ""
+for k in ["cands_a", "cands_b"]:
+    if k not in st.session_state: st.session_state[k] = []
+for k in ["data_a", "data_b"]:
+    if k not in st.session_state: st.session_state[k] = None
 
 # =========================================================
-# [공통 상단 바] 3개의 팝업 메뉴
+# [공통 상단 바] 3개의 팝업 메뉴 (연세대 명부 동적 필터링 반영)
 # =========================================================
 top_spacer, top_btn1, top_btn2, top_btn3 = st.columns([4.5, 1.9, 1.9, 1.7])
 with top_btn1:
     with st.popover("📊 5대 체감 지표 안내", use_container_width=True):
-        st.markdown("""
-        | 지표명 | 이용자 관점 질문 | 화면 시각화 안내 |
-        |---|---|---|
-        | **1. 탑티어 논문 비중** | 유명한 학회/저널에 논문을 자주 내는가? | 🏆 도넛형 차트 + 피라미드 |
-        | **2. 산학/외부 협업** | 기업 과제 or 학술 연구 중심인가? | 📊 막대 그래프 + 태그 |
-        | **3. 학제 간 융합도** | 타 전공 출신도 적응할 수 있는가? | 🔗 생키 다이어그램 |
-        | **4. 연구실 규모** | 연구실에 질문할 사수가 몇 명인가? | 👥 사람 아이콘 그리드 |
-        | **5. 연구 산출 연속성** | 논문이 끊김 없이 꾸준히 나오는가? | 🚦 신호등 배지 + 꺾은선 |
-        """)
+        st.markdown("| 지표명 | 이용자 관점 질문 | 화면 시각화 안내 |\n|---|---|---|\n| **1. 탑티어 비중** | 유명 학회/저널 게재 빈도 | 🏆 도넛형 차트 + 피라미드 |\n| **2. 산학/외부 협업** | 기업 과제 or 학술 연구 중심? | 📊 막대 그래프 + 태그 |\n| **3. 학제 간 융합도** | 타 전공 출신 적응 가능성 | 🔗 생키 다이어그램 |\n| **4. 연구실 규모** | 연구실 사수 인원 수 | 👥 아이콘 그리드 |\n| **5. 산출 연속성** | 논문이 꾸준히 나오는가? | 🚦 신호등 배지 + 꺾은선 |")
 with top_btn2:
     with st.popover("⚠️ 분석 시 주의 사항", use_container_width=True):
-        st.markdown("""
-        - **동명이인 (저자 식별):** 글로벌 DB 특성상 동명이인이 혼재할 수 있어, 검색 후 소속 기관명으로 교차 검증하는 과정이 포함되어 있습니다.
-        - **영문 검색 원칙:** 기계 번역과 실제 공식 논문 영문명의 불일치를 막고자 영문 검색을 원칙으로 합니다.
-        - **빠른 시연을 위한 제한:** 웹사이트 과부하 방지 및 쾌적한 데모를 위해 연구자별 **최근 논문 100편**으로 분석 범위를 제한했습니다.
-        """)
+        st.markdown("- **저자 식별:** 글로벌 DB 특성상 동명이인이 혼재하여 소속 기관 교차 검증 단계를 거칩니다.\n- **영문 원칙:** 기계 번역 오차를 막고자 영문 검색이 원칙이나, 연세대 DB는 자동 매핑을 지원합니다.\n- **속도 제한:** 쾌적한 분석을 위해 최근 논문 100편으로 범위를 제한했습니다.")
 with top_btn3:
-    with st.popover("👨‍🏫 초심자용 연구자 리스트", use_container_width=True):
-        st.markdown("""
-        **[📌 랩매치 연세대학교 추천 검색 명단]**  
-        검색창에 아래 한글 이름을 복사해서 붙여넣어 보세요! 시스템이 자동으로 영문 변환하여 찾아줍니다.
+    with st.popover("🦅 연세대 연구자 리스트", use_container_width=True):
+        st.markdown("**[📌 단과대 및 학과별 명단 검색]**")
+        # 동적 필터링 UI 구현 (인터페이스 난잡함 방지)
+        col_c, col_d = st.columns(2)
+        with col_c:
+            selected_college = st.selectbox("단과대학 선택", list(PROF_DB_TREE.keys()))
+        with col_d:
+            selected_dept = st.selectbox("학과 선택", list(PROF_DB_TREE[selected_college].keys()))
         
-        * **인공지능융합대학 / 공과대학**
-          - 손광훈 (Kwanghoon Sohn)
-          - 함범섭 (Bumsub Ham)
-          - 황도식 (Dosik Hwang)
-        * **문과대학 (문헌정보학과)**
-          - 송민 (Min Song)
-          - 김기영 (Kiyoung Kim)
-          - 주영준 (Youngjoon Joo)
-          - 이지연 (Jiyeon Lee)
-          - 김성언 (Seongeon Kim)
-        """)
+        st.divider()
+        st.markdown(f"**💡 {selected_dept} 교수진** (클릭 시 이름 복사 가능)")
+        for prof in PROF_DB_TREE[selected_college][selected_dept]:
+            st.code(f"{prof['name']} ({prof['eng']})", language="text")
 
 # =========================================================
-# [STEP 1] 검색어 입력
+# [STEP 1] 검색어 입력 및 핫 트렌드 대시보드
 # =========================================================
 if st.session_state.step == 1:
     st.write("\n\n")
@@ -159,19 +174,9 @@ if st.session_state.step == 1:
             if not lab_a_input.strip() or not lab_b_input.strip():
                 st.error("⚠️ 교수님 성함을 모두 입력해 주세요!")
             else:
-                # 💡 연세대학교 교수님 전용 한글 매핑 확장 (김성언 교수님 추가)
-                name_map = {
-                    "손광훈": "Kwanghoon Sohn",
-                    "함범섭": "Bumsub Ham",
-                    "황도식": "Dosik Hwang",
-                    "송민": "Min Song",
-                    "김기영": "Kiyoung Kim",
-                    "주영준": "Youngjoon Joo",
-                    "이지연": "Jiyeon Lee",
-                    "김성언": "Seongeon Kim"  # 만약 검색이 안 된다면 "Sungeon Kim" 등으로 스펠링을 수정해보세요!
-                }
-                query_a_eng = name_map.get(lab_a_input.strip(), lab_a_input.strip())
-                query_b_eng = name_map.get(lab_b_input.strip(), lab_b_input.strip())
+                # json 파일에서 로드된 사전 사용
+                query_a_eng = PROF_NAME_MAP.get(lab_a_input.strip(), lab_a_input.strip())
+                query_b_eng = PROF_NAME_MAP.get(lab_b_input.strip(), lab_b_input.strip())
                 
                 st.session_state.query_a = query_a_eng
                 st.session_state.query_b = query_b_eng
@@ -182,18 +187,48 @@ if st.session_state.step == 1:
                 st.session_state.step = 2
                 st.rerun()
 
-        # 💡 [핵심 구현] 연세대 전용 세로 스크롤 전광판 (김성언 교수님 추가)
+        # 💡 [구현 1] 마우스 오버 시 멈추는 긴 전광판 (onmouseover 활용)
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown("""
         <div style="background-color: #f8fafc; padding: 20px 15px; border-radius: 10px; border: 1px solid #e2e8f0; height: 100px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05); text-align: center;">
-            <marquee direction="up" scrollamount="2" style="color: #334155; font-size: 15px; font-weight: 600; line-height: 2;">
-                🚀 [OpenAlex 실시간 연동] 연세대학교 추천 검색 명단<br>
-                ⭐️ 공대/인공지능: 손광훈 / 함범섭 / 황도식<br>
-                ⭐️ 문헌정보학: 송민 / 김기영 / 주영준 / 이지연 / 김성언<br>
-                💡 검색창에 한글 이름을 입력하고 데이터를 직접 확인해 보세요!
+            <marquee direction="up" scrollamount="2" onmouseover="this.stop();" onmouseout="this.start();" style="color: #334155; font-size: 15px; font-weight: 600; line-height: 2; cursor: pointer;">
+                🚀 [OpenAlex 실시간 연동] 연세대학교 연구자 DB 매핑 현황 (마우스를 올리면 멈춥니다)<br>
+                ⭐️ 공과대학: 손광훈 (전기전자공학부)<br>
+                ⭐️ 인공지능융합대학: 함범섭 (인공지능학과) / 황도식 (인공지능학과)<br>
+                ⭐️ 문과대학 (문헌정보학): 송민 / 김기영 / 주영준 / 이지연 / 김성언<br>
+                💡 상단 '연세대 연구자 리스트'에서 이름을 복사하여 검색창에 붙여넣으세요!
             </marquee>
         </div>
         """, unsafe_allow_html=True)
+
+        # 💡 [구현 2] 하단 빈 공간을 활용한 핫 트렌드 섹션 (이슈 및 OpenAlex 분야)
+        st.markdown("<br>", unsafe_allow_html=True)
+        hot_col1, hot_col2 = st.columns(2)
+        with hot_col1:
+            st.markdown("""
+            <div style="padding: 15px; border-radius: 8px; background-color: #F3F4F6;">
+                <h4 style="margin-top:0px; color:#1F2937;">🔥 글로벌 AI 트렌드 리서치</h4>
+                <p style="font-size:13px; color:#4B5563; margin-bottom:5px;">요즘 가장 핫한 AI 연구자들을 직접 비교해 보세요.</p>
+                <ul style="font-size:14px; margin-bottom:0px; color:#374151;">
+                    <li><strong>Andrew Ng</strong> (Stanford Univ) - Machine Learning</li>
+                    <li><strong>Yann LeCun</strong> (Meta AI) - Deep Learning</li>
+                    <li><strong>Ilya Sutskever</strong> (OpenAI) - LLM, NLP</li>
+                </ul>
+            </div>
+            """, unsafe_allow_html=True)
+        with hot_col2:
+            st.markdown("""
+            <div style="padding: 15px; border-radius: 8px; background-color: #F3F4F6;">
+                <h4 style="margin-top:0px; color:#1F2937;">🌐 OpenAlex 인기 학문 분야</h4>
+                <p style="font-size:13px; color:#4B5563; margin-bottom:5px;">OpenAlex DB에서 최근 가장 활발하게 인용되는 융합 분야입니다.</p>
+                <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px;">
+                    <span style="background:#E5E7EB; padding: 4px 8px; border-radius: 4px; font-size:12px; font-weight:bold;">Computer Science</span>
+                    <span style="background:#E5E7EB; padding: 4px 8px; border-radius: 4px; font-size:12px; font-weight:bold;">Medicine</span>
+                    <span style="background:#E5E7EB; padding: 4px 8px; border-radius: 4px; font-size:12px; font-weight:bold;">Materials Science</span>
+                    <span style="background:#E5E7EB; padding: 4px 8px; border-radius: 4px; font-size:12px; font-weight:bold;">Chemistry</span>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
 
 # =========================================================
 # [STEP 2] 동명이인 걸러내기 및 에러 친절 피드백
