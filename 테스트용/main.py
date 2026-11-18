@@ -187,17 +187,49 @@ if st.session_state.step == 1:
                 st.session_state.step = 2
                 st.rerun()
 
-        # 💡 [구현 1] 마우스 오버 시 멈추는 긴 전광판 (onmouseover 활용)
+       # 💡 [구현 1] 마우스 오버 시 멈추는 긴 전광판 (순수 CSS 애니메이션 적용)
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown("""
-        <div style="background-color: #f8fafc; padding: 20px 15px; border-radius: 10px; border: 1px solid #e2e8f0; height: 100px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05); text-align: center;">
-            <marquee direction="up" scrollamount="2" onmouseover="this.stop();" onmouseout="this.start();" style="color: #334155; font-size: 15px; font-weight: 600; line-height: 2; cursor: pointer;">
+        <style>
+        .ticker-wrap {
+            height: 120px;
+            overflow: hidden;
+            background-color: #f8fafc;
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            position: relative;
+            cursor: pointer;
+        }
+        .ticker-content {
+            text-align: center;
+            color: #334155;
+            font-size: 15px;
+            font-weight: 600;
+            line-height: 1.9;
+            position: absolute;
+            width: 100%;
+            /* 12초 동안 일정한 속도로 무한 반복 */
+            animation: scrollUp 12s linear infinite; 
+        }
+        /* 마우스가 올라가면 애니메이션 일시 정지! */
+        .ticker-wrap:hover .ticker-content {
+            animation-play-state: paused;
+        }
+        @keyframes scrollUp {
+            0% { transform: translateY(120px); }
+            100% { transform: translateY(-160px); }
+        }
+        </style>
+        
+        <div class="ticker-wrap">
+            <div class="ticker-content">
                 🚀 [OpenAlex 실시간 연동] 연세대학교 연구자 DB 매핑 현황 (마우스를 올리면 멈춥니다)<br>
                 ⭐️ 공과대학: 손광훈 (전기전자공학부)<br>
                 ⭐️ 인공지능융합대학: 함범섭 (인공지능학과) / 황도식 (인공지능학과)<br>
                 ⭐️ 문과대학 (문헌정보학): 송민 / 김기영 / 주영준 / 이지연 / 김성언<br>
                 💡 상단 '연세대 연구자 리스트'에서 이름을 복사하여 검색창에 붙여넣으세요!
-            </marquee>
+            </div>
         </div>
         """, unsafe_allow_html=True)
 
