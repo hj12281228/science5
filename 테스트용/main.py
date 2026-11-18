@@ -102,7 +102,7 @@ if "summary_1" not in st.session_state: st.session_state.summary_1 = ""
 if "summary_2" not in st.session_state: st.session_state.summary_2 = ""
 
 # =========================================================
-# [공통 상단 바] 3개의 팝업 메뉴로 확장
+# [공통 상단 바] 3개의 팝업 메뉴
 # =========================================================
 top_spacer, top_btn1, top_btn2, top_btn3 = st.columns([4.5, 1.9, 1.9, 1.7])
 with top_btn1:
@@ -129,10 +129,9 @@ with top_btn3:
         **[📌 랩매치 추천 검색 명단]**  
         검색창에 아래 한글 이름을 복사해서 붙여넣어 보세요! 시스템이 자동으로 영문 변환하여 찾아줍니다.
         
-        * **연세대학교 인공지능융합대학**
-          - 함범섭 (Bumsub Ham)
-        * **연세대학교 공과대학**
+        * **기본 데모 연구자**
           - 손광훈 (Kwanghoon Sohn)
+          - 함범섭 (Bumsub Ham)
         * **연세대학교 문과대학 (문헌정보학)**
           - 김기영 (Kiyoung Kim)
           - 주영준 (Youngjoon Joo)
@@ -150,15 +149,14 @@ if st.session_state.step == 1:
         st.markdown("<h1 style='text-align: center; font-size: 60px; margin-bottom: 0px;'>🔬 LABMATCH</h1>", unsafe_allow_html=True)
         st.markdown("<p style='text-align: center; font-size: 18px; color: #94A3B8; margin-bottom: 35px;'>예비 대학원생을 위한 연구실 1:1 체감 지표 비교 플랫폼</p>", unsafe_allow_html=True)
 
-        lab_a_input = st.text_input("첫 번째 교수님 성함 입력", value=st.session_state.query_a, placeholder="예: 손광훈 (한글/영문 모두 가능)")
-        lab_b_input = st.text_input("두 번째 교수님 성함 입력", value=st.session_state.query_b, placeholder="예: 함범섭 (한글/영문 모두 가능)")
+        lab_a_input = st.text_input("첫 번째 교수님 성함 입력", value=st.session_state.query_a, placeholder="예: 김기영 (한글/영문 모두 가능)")
+        lab_b_input = st.text_input("두 번째 교수님 성함 입력", value=st.session_state.query_b, placeholder="예: 주영준 (한글/영문 모두 가능)")
         st.write("\n")
 
         if st.button("🔍 동명이인 확인 및 교수님 검색", use_container_width=True):
             if not lab_a_input.strip() or not lab_b_input.strip():
                 st.error("⚠️ 교수님 성함을 모두 입력해 주세요!")
             else:
-                # 💡 안전한 데모를 위한 한글 -> 영문 자동 매핑 사전 확장
                 name_map = {
                     "손광훈": "Kwanghoon Sohn",
                     "함범섭": "Bumsub Ham",
@@ -180,12 +178,15 @@ if st.session_state.step == 1:
                 st.session_state.step = 2
                 st.rerun()
 
-        # 💡 [핵심 구현] 시각적 효과를 위한 실시간 움직이는 전광판 (Marquee)
+        # 💡 [핵심 구현] OpenAlex 스타일 세로 스크롤 (위에서 아래로 움직이는 데이터 피드)
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown("""
-        <div style="background-color: #f8fafc; padding: 12px 15px; border-radius: 10px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-            <marquee direction="left" scrollamount="6" style="color: #334155; font-size: 15px; font-weight: 600;">
-                🚀 [OpenAlex 실시간 연동 중] 추천 검색어: 연세대 인공지능융합대학 함범섭 교수 ⭐️ 연세대 공과대학 손광훈 교수 ⭐️ 연세대 문헌정보학과 김기영 교수 ⭐️ 연세대 문헌정보학과 주영준 교수 ⭐️ 검색창에 한글 이름을 입력하고 데이터를 직접 확인해 보세요!
+        <div style="background-color: #f8fafc; padding: 20px 15px; border-radius: 10px; border: 1px solid #e2e8f0; height: 100px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05); text-align: center;">
+            <marquee direction="up" scrollamount="2" style="color: #334155; font-size: 15px; font-weight: 600; line-height: 2;">
+                🚀 [OpenAlex 실시간 연동 중] 추천 검색 명단 업데이트<br>
+                ⭐️ 기본 데모: 손광훈 / 함범섭<br>
+                ⭐️ 연세대 문헌정보학: 김기영 / 주영준<br>
+                💡 검색창에 한글 이름을 입력하고 데이터를 직접 확인해 보세요!
             </marquee>
         </div>
         """, unsafe_allow_html=True)
