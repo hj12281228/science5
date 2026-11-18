@@ -16,7 +16,6 @@ from practice5 import render_continuity
 def load_professor_db():
     db_path = Path("professors_db.json")
     
-    # 파일이 없으면 초기 DB를 자동으로 만들어줍니다 (신뢰성 확보 및 관리 용이)
     if not db_path.exists():
         default_db = {
             "인공지능융합대학": {
@@ -44,7 +43,6 @@ def load_professor_db():
     
     db_tree = json.loads(db_path.read_text(encoding="utf-8"))
     
-    # 검색용 1차원 매핑 사전 자동 생성 (한글 -> 영문)
     name_map = {}
     for college, depts in db_tree.items():
         for dept, profs in depts.items():
@@ -53,11 +51,10 @@ def load_professor_db():
                 
     return db_tree, name_map
 
-# 앱 실행 시 DB 로드
 PROF_DB_TREE, PROF_NAME_MAP = load_professor_db()
 
 # =========================================================
-# [엔진 1, 2] OpenAlex 데이터 수집 (이전과 동일)
+# [엔진 1, 2] OpenAlex 데이터 수집
 # =========================================================
 @st.cache_data(show_spinner=False, ttl=3600)
 def search_author_candidates(query_name):
@@ -132,7 +129,7 @@ for k in ["data_a", "data_b"]:
     if k not in st.session_state: st.session_state[k] = None
 
 # =========================================================
-# [공통 상단 바] 3개의 팝업 메뉴 (연세대 명부 동적 필터링 반영)
+# [공통 상단 바] 3개의 팝업 메뉴 
 # =========================================================
 top_spacer, top_btn1, top_btn2, top_btn3 = st.columns([4.5, 1.9, 1.9, 1.7])
 with top_btn1:
@@ -144,7 +141,6 @@ with top_btn2:
 with top_btn3:
     with st.popover("🦅 연세대 연구자 리스트", use_container_width=True):
         st.markdown("**[📌 단과대 및 학과별 명단 검색]**")
-        # 동적 필터링 UI 구현 (인터페이스 난잡함 방지)
         col_c, col_d = st.columns(2)
         with col_c:
             selected_college = st.selectbox("단과대학 선택", list(PROF_DB_TREE.keys()))
@@ -174,7 +170,6 @@ if st.session_state.step == 1:
             if not lab_a_input.strip() or not lab_b_input.strip():
                 st.error("⚠️ 교수님 성함을 모두 입력해 주세요!")
             else:
-                # json 파일에서 로드된 사전 사용
                 query_a_eng = PROF_NAME_MAP.get(lab_a_input.strip(), lab_a_input.strip())
                 query_b_eng = PROF_NAME_MAP.get(lab_b_input.strip(), lab_b_input.strip())
                 
@@ -187,77 +182,118 @@ if st.session_state.step == 1:
                 st.session_state.step = 2
                 st.rerun()
 
-       # 💡 [구현 1] 마우스 오버 시 멈추는 긴 전광판 (순수 CSS 애니메이션 적용)
         st.markdown("<br>", unsafe_allow_html=True)
+        
+        # 공통 CSS (마우스 오버 시 멈추는 애니메이션 포함)
         st.markdown("""
         <style>
-        .ticker-wrap {
-            height: 120px;
-            overflow: hidden;
-            background-color: #f8fafc;
+        .dashboard-box {
+            background-color: #F8FAFC;
             border-radius: 10px;
             border: 1px solid #e2e8f0;
+            padding: 15px;
             box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+        }
+        .ticker-wrap {
+            height: 90px;
+            overflow: hidden;
+            position: relative;
+            cursor: pointer;
+        }
+        .ticker-wrap-tall {
+            height: 220px;
+            overflow: hidden;
             position: relative;
             cursor: pointer;
         }
         .ticker-content {
             text-align: center;
             color: #334155;
-            font-size: 15px;
+            font-size: 14.5px;
             font-weight: 600;
-            line-height: 1.9;
+            line-height: 2.0;
             position: absolute;
             width: 100%;
-            /* 12초 동안 일정한 속도로 무한 반복 */
-            animation: scrollUp 12s linear infinite; 
         }
-        /* 마우스가 올라가면 애니메이션 일시 정지! */
-        .ticker-wrap:hover .ticker-content {
-            animation-play-state: paused;
-        }
-        @keyframes scrollUp {
-            0% { transform: translateY(120px); }
+        
+        /* 첫 번째 전광판 (연세대) 애니메이션 */
+        .anim-y { animation: scrollUpY 12s linear infinite; }
+        .ticker-wrap:hover .anim-y { animation-play-state: paused; }
+        @keyframes scrollUpY {
+            0% { transform: translateY(90px); }
             100% { transform: translateY(-160px); }
         }
-        </style>
         
-        <div class="ticker-wrap">
-            <div class="ticker-content">
-                🚀 [OpenAlex 실시간 연동] 연세대학교 연구자 DB 매핑 현황 (마우스를 올리면 멈춥니다)<br>
-                ⭐️ 공과대학: 손광훈 (전기전자공학부)<br>
-                ⭐️ 인공지능융합대학: 함범섭 (인공지능학과) / 황도식 (인공지능학과)<br>
-                ⭐️ 문과대학 (문헌정보학): 송민 / 김기영 / 주영준 / 이지연 / 김성언<br>
-                💡 상단 '연세대 연구자 리스트'에서 이름을 복사하여 검색창에 붙여넣으세요!
+        /* 두 번째 전광판 (AI 트렌드) 애니메이션 */
+        .anim-ai { animation: scrollUpAI 20s linear infinite; }
+        .ticker-wrap-tall:hover .anim-ai { animation-play-state: paused; }
+        @keyframes scrollUpAI {
+            0% { transform: translateY(220px); }
+            100% { transform: translateY(-350px); }
+        }
+        </style>
+        """, unsafe_allow_html=True)
+
+        # 💡 [구현 1] 출처를 명시한 연세대 전광판
+        st.markdown("""
+        <div class="dashboard-box">
+            <h4 style="margin-top:0px; margin-bottom: 10px; color:#1F2937; text-align:center;">🦅 연세대학교 연구자 리스트 기반 추천 명단</h4>
+            <div class="ticker-wrap">
+                <div class="ticker-content anim-y">
+                    🚀 [OpenAlex 실시간 연동] DB 매핑 현황 (마우스를 올리면 멈춥니다)<br>
+                    ⭐️ 공과대학: 손광훈 (전기전자공학부)<br>
+                    ⭐️ 인공지능융합대학: 함범섭 (인공지능학과) / 황도식 (인공지능학과)<br>
+                    ⭐️ 문과대학 (문헌정보학): 송민 / 김기영 / 주영준 / 이지연 / 김성언<br>
+                    💡 상단 '연세대 연구자 리스트'에서 이름을 복사하여 검색창에 붙여넣으세요!
+                </div>
             </div>
         </div>
         """, unsafe_allow_html=True)
 
-        # 💡 [구현 2] 하단 빈 공간을 활용한 핫 트렌드 섹션 (이슈 및 OpenAlex 분야)
-        st.markdown("<br>", unsafe_allow_html=True)
+        # 💡 [구현 2 & 3] 핫 트렌드 전광판 + OpenAlex 및 융합 키워드 채우기
         hot_col1, hot_col2 = st.columns(2)
         with hot_col1:
             st.markdown("""
-            <div style="padding: 15px; border-radius: 8px; background-color: #F3F4F6;">
-                <h4 style="margin-top:0px; color:#1F2937;">🔥 글로벌 AI 트렌드 리서치</h4>
-                <p style="font-size:13px; color:#4B5563; margin-bottom:5px;">요즘 가장 핫한 AI 연구자들을 직접 비교해 보세요.</p>
-                <ul style="font-size:14px; margin-bottom:0px; color:#374151;">
-                    <li><strong>Andrew Ng</strong> (Stanford Univ) - Machine Learning</li>
-                    <li><strong>Yann LeCun</strong> (Meta AI) - Deep Learning</li>
-                    <li><strong>Ilya Sutskever</strong> (OpenAI) - LLM, NLP</li>
-                </ul>
+            <div class="dashboard-box" style="height: 290px;">
+                <h4 style="margin-top:0px; margin-bottom: 10px; color:#1F2937; text-align:center;">🔥 글로벌 AI 트렌드 리서치</h4>
+                <div class="ticker-wrap-tall">
+                    <div class="ticker-content anim-ai">
+                        요즘 가장 핫한 글로벌 AI 연구자들을 비교해 보세요!<br><br>
+                        🤖 <strong>Sam Altman</strong> (OpenAI)<br>AGI & LLM 생태계<br><br>
+                        🧬 <strong>Demis Hassabis</strong> (Google DeepMind)<br>AlphaFold & AI for Science<br><br>
+                        🧠 <strong>Geoffrey Hinton</strong> (Univ. of Toronto)<br>Neural Networks & AI 안전성<br><br>
+                        👁️ <strong>Fei-Fei Li</strong> (Stanford Univ)<br>Computer Vision & 인간 중심 AI<br><br>
+                        ⚙️ <strong>Yann LeCun</strong> (Meta AI)<br>Self-Supervised Learning<br><br>
+                        🚀 <strong>Andrej Karpathy</strong> (Eureka Labs)<br>AI Education & 자율주행<br><br>
+                        💡 영어 이름을 그대로 검색창에 입력해 보세요!
+                    </div>
+                </div>
             </div>
             """, unsafe_allow_html=True)
+            
         with hot_col2:
             st.markdown("""
-            <div style="padding: 15px; border-radius: 8px; background-color: #F3F4F6;">
-                <h4 style="margin-top:0px; color:#1F2937;">🌐 OpenAlex 인기 학문 분야</h4>
-                <p style="font-size:13px; color:#4B5563; margin-bottom:5px;">OpenAlex DB에서 최근 가장 활발하게 인용되는 융합 분야입니다.</p>
-                <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px;">
-                    <span style="background:#E5E7EB; padding: 4px 8px; border-radius: 4px; font-size:12px; font-weight:bold;">Computer Science</span>
-                    <span style="background:#E5E7EB; padding: 4px 8px; border-radius: 4px; font-size:12px; font-weight:bold;">Medicine</span>
-                    <span style="background:#E5E7EB; padding: 4px 8px; border-radius: 4px; font-size:12px; font-weight:bold;">Materials Science</span>
-                    <span style="background:#E5E7EB; padding: 4px 8px; border-radius: 4px; font-size:12px; font-weight:bold;">Chemistry</span>
+            <div class="dashboard-box" style="height: 290px; display: flex; flex-direction: column; justify-content: space-between;">
+                <div>
+                    <h4 style="margin-top:0px; color:#1F2937;">🌐 OpenAlex 인기 학문 분야</h4>
+                    <p style="font-size:13px; color:#4B5563; margin-bottom:5px;">글로벌 논문 DB에서 가장 활발히 인용되는 최상위 분야입니다.</p>
+                    <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px;">
+                        <span style="background:#E5E7EB; padding: 4px 8px; border-radius: 4px; font-size:12px; font-weight:bold; color:#374151;">Computer Science</span>
+                        <span style="background:#E5E7EB; padding: 4px 8px; border-radius: 4px; font-size:12px; font-weight:bold; color:#374151;">Medicine</span>
+                        <span style="background:#E5E7EB; padding: 4px 8px; border-radius: 4px; font-size:12px; font-weight:bold; color:#374151;">Materials Science</span>
+                    </div>
+                </div>
+                <hr style="margin: 15px 0; border-top: 1px dashed #CBD5E1;">
+                <div>
+                    <h4 style="margin-top:0px; color:#1F2937;">🚀 2026 급부상 융합 연구 키워드</h4>
+                    <p style="font-size:13px; color:#4B5563; margin-bottom:5px;">랩매치가 주목하는 차세대 학제 간 융합 테마입니다.</p>
+                    <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px;">
+                        <span style="color:#2563EB; font-size:13px; font-weight:bold;">#Bio_Informatics</span>
+                        <span style="color:#059669; font-size:13px; font-weight:bold;">#Climate_Tech</span>
+                        <span style="color:#D97706; font-size:13px; font-weight:bold;">#Quantum_AI</span>
+                        <span style="color:#7C3AED; font-size:13px; font-weight:bold;">#Neuro_Symbolic</span>
+                    </div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
