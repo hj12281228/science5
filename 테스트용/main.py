@@ -162,8 +162,9 @@ if st.session_state.step == 1:
         st.markdown("<h1 style='text-align: center; font-size: 60px; margin-bottom: 0px;'>🔬 LABMATCH</h1>", unsafe_allow_html=True)
         st.markdown("<p style='text-align: center; font-size: 18px; color: #94A3B8; margin-bottom: 35px;'>예비 대학원생을 위한 연구실 1:1 체감 지표 비교 플랫폼</p>", unsafe_allow_html=True)
 
-        lab_a_input = st.text_input("첫 번째 교수님 성함 입력", value=st.session_state.query_a, placeholder="예: 송민 (한글/영문 모두 가능)")
-        lab_b_input = st.text_input("두 번째 교수님 성함 입력", value=st.session_state.query_b, placeholder="예: 김성언 (한글/영문 모두 가능)")
+        # 💡 예시(Placeholder)에서 문헌정보학과 교수님 제외하고 가장 안전한 두 분으로 교체
+        lab_a_input = st.text_input("첫 번째 교수님 성함 입력", value=st.session_state.query_a, placeholder="예: 손광훈 (한글/영문 모두 가능)")
+        lab_b_input = st.text_input("두 번째 교수님 성함 입력", value=st.session_state.query_b, placeholder="예: 함범섭 (한글/영문 모두 가능)")
         st.write("\n")
 
         if st.button("🔍 동명이인 확인 및 교수님 검색", use_container_width=True):
@@ -184,7 +185,6 @@ if st.session_state.step == 1:
 
         st.markdown("<br>", unsafe_allow_html=True)
         
-        # 💡 개선된 공통 CSS (마스크 그라데이션 페이드 효과 + 부드러운 % 기반 애니메이션)
         st.markdown("""
         <style>
         .dashboard-box {
@@ -194,13 +194,12 @@ if st.session_state.step == 1:
             padding: 15px;
             box-shadow: 0 1px 3px rgba(0,0,0,0.05);
             margin-bottom: 20px;
-            overflow: hidden; /* 박스 밖으로 삐져나가는 현상 원천 차단 */
+            overflow: hidden;
         }
         .ticker-wrap, .ticker-wrap-tall {
             overflow: hidden;
             position: relative;
             cursor: pointer;
-            /* 텍스트가 위아래 경계에서 서서히 사라지도록 그라데이션 페이드 효과 적용 */
             -webkit-mask-image: linear-gradient(to bottom, transparent, black 15%, black 85%, transparent);
             mask-image: linear-gradient(to bottom, transparent, black 15%, black 85%, transparent);
         }
@@ -217,7 +216,6 @@ if st.session_state.step == 1:
             width: 100%;
         }
         
-        /* 첫 번째 전광판 (연세대) 애니메이션 - 비율(%)을 사용하여 궤도 보정 */
         .anim-y { animation: scrollUpY 12s linear infinite; }
         .ticker-wrap:hover .anim-y { animation-play-state: paused; }
         @keyframes scrollUpY {
@@ -225,7 +223,6 @@ if st.session_state.step == 1:
             100% { top: 0; transform: translateY(-100%); }
         }
         
-        /* 두 번째 전광판 (AI 트렌드) 애니메이션 */
         .anim-ai { animation: scrollUpAI 20s linear infinite; }
         .ticker-wrap-tall:hover .anim-ai { animation-play-state: paused; }
         @keyframes scrollUpAI {
@@ -235,7 +232,6 @@ if st.session_state.step == 1:
         </style>
         """, unsafe_allow_html=True)
 
-        # 💡 출처를 명시한 연세대 전광판
         st.markdown("""
         <div class="dashboard-box">
             <h4 style="margin-top:0px; margin-bottom: 10px; color:#1F2937; text-align:center;">🦅 연세대학교 연구자 리스트 기반 추천 명단</h4>
@@ -251,7 +247,6 @@ if st.session_state.step == 1:
         </div>
         """, unsafe_allow_html=True)
 
-        # 💡 핫 트렌드 전광판 + OpenAlex 및 융합 키워드 채우기
         hot_col1, hot_col2 = st.columns(2)
         with hot_col1:
             st.markdown("""
