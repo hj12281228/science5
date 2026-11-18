@@ -15,7 +15,6 @@ from practice5 import render_continuity
 # =========================================================
 def load_professor_db():
     db_path = Path("professors_db.json")
-    
     if not db_path.exists():
         default_db = {
             "인공지능융합대학": {
@@ -129,7 +128,7 @@ for k in ["data_a", "data_b"]:
     if k not in st.session_state: st.session_state[k] = None
 
 # =========================================================
-# [공통 상단 바] 3개의 팝업 메뉴 
+# [공통 상단 바] 3개의 팝업 메뉴
 # =========================================================
 top_spacer, top_btn1, top_btn2, top_btn3 = st.columns([4.5, 1.9, 1.9, 1.7])
 with top_btn1:
@@ -162,7 +161,6 @@ if st.session_state.step == 1:
         st.markdown("<h1 style='text-align: center; font-size: 60px; margin-bottom: 0px;'>🔬 LABMATCH</h1>", unsafe_allow_html=True)
         st.markdown("<p style='text-align: center; font-size: 18px; color: #94A3B8; margin-bottom: 35px;'>예비 대학원생을 위한 연구실 1:1 체감 지표 비교 플랫폼</p>", unsafe_allow_html=True)
 
-        # 💡 예시(Placeholder)에서 문헌정보학과 교수님 제외하고 가장 안전한 두 분으로 교체
         lab_a_input = st.text_input("첫 번째 교수님 성함 입력", value=st.session_state.query_a, placeholder="예: 손광훈 (한글/영문 모두 가능)")
         lab_b_input = st.text_input("두 번째 교수님 성함 입력", value=st.session_state.query_b, placeholder="예: 함범섭 (한글/영문 모두 가능)")
         st.write("\n")
@@ -184,66 +182,32 @@ if st.session_state.step == 1:
                 st.rerun()
 
         st.markdown("<br>", unsafe_allow_html=True)
-        
         st.markdown("""
         <style>
-        .dashboard-box {
-            background-color: #F8FAFC;
-            border-radius: 10px;
-            border: 1px solid #e2e8f0;
-            padding: 15px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-            margin-bottom: 20px;
-            overflow: hidden;
-        }
-        .ticker-wrap, .ticker-wrap-tall {
-            overflow: hidden;
-            position: relative;
-            cursor: pointer;
-            -webkit-mask-image: linear-gradient(to bottom, transparent, black 15%, black 85%, transparent);
-            mask-image: linear-gradient(to bottom, transparent, black 15%, black 85%, transparent);
-        }
+        .dashboard-box { background-color: #F8FAFC; border-radius: 10px; border: 1px solid #e2e8f0; padding: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-bottom: 20px; overflow: hidden; }
+        .ticker-wrap, .ticker-wrap-tall { overflow: hidden; position: relative; cursor: pointer; -webkit-mask-image: linear-gradient(to bottom, transparent, black 15%, black 85%, transparent); mask-image: linear-gradient(to bottom, transparent, black 15%, black 85%, transparent); }
         .ticker-wrap { height: 90px; }
         .ticker-wrap-tall { height: 220px; }
-        
-        .ticker-content {
-            text-align: center;
-            color: #334155;
-            font-size: 14.5px;
-            font-weight: 600;
-            line-height: 2.0;
-            position: absolute;
-            width: 100%;
-        }
-        
+        .ticker-content { text-align: center; color: #334155; font-size: 14.5px; font-weight: 600; line-height: 2.0; position: absolute; width: 100%; }
         .anim-y { animation: scrollUpY 12s linear infinite; }
         .ticker-wrap:hover .anim-y { animation-play-state: paused; }
-        @keyframes scrollUpY {
-            0% { top: 100%; transform: translateY(0); }
-            100% { top: 0; transform: translateY(-100%); }
-        }
-        
+        @keyframes scrollUpY { 0% { top: 100%; transform: translateY(0); } 100% { top: 0; transform: translateY(-100%); } }
         .anim-ai { animation: scrollUpAI 20s linear infinite; }
         .ticker-wrap-tall:hover .anim-ai { animation-play-state: paused; }
-        @keyframes scrollUpAI {
-            0% { top: 100%; transform: translateY(0); }
-            100% { top: 0; transform: translateY(-100%); }
-        }
+        @keyframes scrollUpAI { 0% { top: 100%; transform: translateY(0); } 100% { top: 0; transform: translateY(-100%); } }
         </style>
         """, unsafe_allow_html=True)
 
         st.markdown("""
         <div class="dashboard-box">
             <h4 style="margin-top:0px; margin-bottom: 10px; color:#1F2937; text-align:center;">🦅 연세대학교 연구자 리스트 기반 추천 명단</h4>
-            <div class="ticker-wrap">
-                <div class="ticker-content anim-y">
-                    🚀 [OpenAlex 실시간 연동] DB 매핑 현황 (마우스를 올리면 멈춥니다)<br>
-                    ⭐️ 공과대학: 손광훈 (전기전자공학부)<br>
-                    ⭐️ 인공지능융합대학: 함범섭 (인공지능학과) / 황도식 (인공지능학과)<br>
-                    ⭐️ 문과대학 (문헌정보학): 송민 / 김기영 / 주영준 / 이지연 / 김성언<br>
-                    💡 상단 '연세대 연구자 리스트'에서 이름을 복사하여 검색창에 붙여넣으세요!
-                </div>
-            </div>
+            <div class="ticker-wrap"><div class="ticker-content anim-y">
+                🚀 [OpenAlex 실시간 연동] DB 매핑 현황 (마우스를 올리면 멈춥니다)<br>
+                ⭐️ 공과대학: 손광훈 (전기전자공학부)<br>
+                ⭐️ 인공지능융합대학: 함범섭 (인공지능학과) / 황도식 (인공지능학과)<br>
+                ⭐️ 문과대학 (문헌정보학): 송민 / 김기영 / 주영준 / 이지연 / 김성언<br>
+                💡 상단 '연세대 연구자 리스트'에서 이름을 복사하여 검색창에 붙여넣으세요!
+            </div></div>
         </div>
         """, unsafe_allow_html=True)
 
@@ -252,18 +216,16 @@ if st.session_state.step == 1:
             st.markdown("""
             <div class="dashboard-box" style="height: 290px;">
                 <h4 style="margin-top:0px; margin-bottom: 10px; color:#1F2937; text-align:center;">🔥 글로벌 AI 트렌드 리서치</h4>
-                <div class="ticker-wrap-tall">
-                    <div class="ticker-content anim-ai">
-                        요즘 가장 핫한 글로벌 AI 연구자들을 비교해 보세요!<br><br>
-                        🤖 <strong>Sam Altman</strong> (OpenAI)<br>AGI & LLM 생태계<br><br>
-                        🧬 <strong>Demis Hassabis</strong> (Google DeepMind)<br>AlphaFold & AI for Science<br><br>
-                        🧠 <strong>Geoffrey Hinton</strong> (Univ. of Toronto)<br>Neural Networks & AI 안전성<br><br>
-                        👁️ <strong>Fei-Fei Li</strong> (Stanford Univ)<br>Computer Vision & 인간 중심 AI<br><br>
-                        ⚙️ <strong>Yann LeCun</strong> (Meta AI)<br>Self-Supervised Learning<br><br>
-                        🚀 <strong>Andrej Karpathy</strong> (Eureka Labs)<br>AI Education & 자율주행<br><br>
-                        💡 영어 이름을 그대로 검색창에 입력해 보세요!
-                    </div>
-                </div>
+                <div class="ticker-wrap-tall"><div class="ticker-content anim-ai">
+                    요즘 가장 핫한 글로벌 AI 연구자들을 비교해 보세요!<br><br>
+                    🤖 <strong>Sam Altman</strong> (OpenAI)<br>AGI & LLM 생태계<br><br>
+                    🧬 <strong>Demis Hassabis</strong> (Google DeepMind)<br>AlphaFold & AI for Science<br><br>
+                    🧠 <strong>Geoffrey Hinton</strong> (Univ. of Toronto)<br>Neural Networks & AI 안전성<br><br>
+                    👁️ <strong>Fei-Fei Li</strong> (Stanford Univ)<br>Computer Vision & 인간 중심 AI<br><br>
+                    ⚙️ <strong>Yann LeCun</strong> (Meta AI)<br>Self-Supervised Learning<br><br>
+                    🚀 <strong>Andrej Karpathy</strong> (Eureka Labs)<br>AI Education & 자율주행<br><br>
+                    💡 영어 이름을 그대로 검색창에 입력해 보세요!
+                </div></div>
             </div>
             """, unsafe_allow_html=True)
             
@@ -304,7 +266,7 @@ elif st.session_state.step == 2:
     with col1:
         st.subheader(f"1️⃣ '{st.session_state.query_a}' 검색 결과")
         if not st.session_state.cands_a:
-            st.error("💡 **검색 결과가 없습니다.**\n\n- 논문에 기재된 공식 영문 스펠링과 다를 수 있습니다.\n- 구글 스칼라 등에서 정확한 영문 성함을 확인 후 다시 입력해 보세요.")
+            st.error("💡 **검색 결과가 없습니다.**")
             sel_a = None
         else:
             options_a = {c["id"]: f"{c['name']} (소속: {c['institution']} / 논문 {c['works_count']}편)" for c in st.session_state.cands_a}
@@ -313,7 +275,7 @@ elif st.session_state.step == 2:
     with col2:
         st.subheader(f"2️⃣ '{st.session_state.query_b}' 검색 결과")
         if not st.session_state.cands_b:
-            st.error("💡 **검색 결과가 없습니다.**\n\n- 논문에 기재된 공식 영문 스펠링과 다를 수 있습니다.\n- 구글 스칼라 등에서 정확한 영문 성함을 확인 후 다시 입력해 보세요.")
+            st.error("💡 **검색 결과가 없습니다.**")
             sel_b = None
         else:
             options_b = {c["id"]: f"{c['name']} (소속: {c['institution']} / 논문 {c['works_count']}편)" for c in st.session_state.cands_b}
@@ -379,33 +341,67 @@ elif st.session_state.step == 3:
             st.rerun()
 
 # =========================================================
-# [STEP 4] 리포트 다운로드 (PDF 오류 해결)
+# [STEP 4] 리포트 다운로드 (개선안: 모듈형 커스텀 빌더 & 맞춤 가이드)
 # =========================================================
 elif st.session_state.step == 4:
-    st.title("📌 최종 비교 리포트 다운로드")
+    st.title("📌 랩매치 종합 분석 리포트 다운로드")
     st.divider()
 
-    st.subheader("💡 맞춤형 Visual Brief")
-    st.success(
-        f"1. **연구 역량:** {st.session_state.summary_1}\n"
-        "2. **연구실 규모:** 구체적인 인원과 협업 방식을 데이터로 확인했습니다.\n"
-        f"3. **산학/외부 협업:** {st.session_state.summary_2 if st.session_state.summary_2 else '데이터 산출 완료'}\n"
-    )
+    prof_a = st.session_state.data_a['professor']
+    prof_b = st.session_state.data_b['professor']
+
+    # 1. 시각적 밸런스를 맞춘 Data-Driven Executive Summary
+    st.subheader("📊 1. 핵심 지표 요약 (Executive Summary)")
+    st.caption("앞서 분석된 5대 핵심 체감 지표의 주요 결과를 한눈에 비교합니다.")
+    
+    with st.container(border=True):
+        st.markdown(f"**🔵 {prof_a} 연구실 vs 🔴 {prof_b} 연구실**")
+        st.write(f"✓ **연구 역량 (탑티어):** {st.session_state.summary_1}")
+        st.write(f"✓ **협업 생태계 (산학/외부):** {st.session_state.summary_2 if st.session_state.summary_2 else '데이터 분석 완료'}")
+        st.write("✓ **규모 및 인프라:** 인적 자원 밀도 및 연속성 데이터 확보 완료 (상세 그래프 참조)")
+
+    # 2. 데이터 기반 실전 면담 가이드 (가짜 AI 대신 룰베이스 실용적 접근)
+    st.subheader("🗣️ 2. 데이터 기반 맞춤형 교수님 면담 가이드")
+    st.info(f"💡 **{prof_a} 교수님 면담 시 추천 질문**\n\n'최근 주요 학술지 게재와 활발한 협업 데이터가 인상적입니다. 신입생이 연구실에 합류할 경우, 기존 과제에 배정되는 방식과 주도적으로 논문을 작성할 기회가 어떻게 주어지는지 궁금합니다.'")
+    st.info(f"💡 **{prof_b} 교수님 면담 시 추천 질문**\n\n'연구 산출 연속성 지표가 훌륭하신데, 연구실 내부에서 사수(선배)와 신입생 간의 멘토링이나 논문 지도가 어떤 체계로 이루어지는지 여쭤보고 싶습니다.'")
 
     st.divider()
-    st.markdown("**📂 다운로드 파일 포맷 안내**")
-    st.caption("기존에 PDF나 HWP 형식을 선택했을 때 파일이 깨지거나 열리지 않던 현상을 해결하기 위해, 텍스트가 완벽하게 호환되는 순수 텍스트(TXT)와 마크다운(MD) 형식으로 지원 포맷을 최적화했습니다.")
     
-    col_fmt, col_dl = st.columns([1, 2])
-    with col_fmt: 
-        file_format = st.selectbox("파일 형식", ["TXT (일반 텍스트)", "MD (마크다운 포맷)"])
+    # 3. 모듈형 리포트 커스텀 다운로드 (사용자 선택 권한 부여)
+    st.subheader("💾 3. 맞춤형 리포트 내보내기")
+    st.caption("다운로드할 리포트에 포함할 항목과 파일 형식을 직접 선택하세요.")
     
+    col_opt, col_dl = st.columns([1.2, 1])
+    with col_opt:
+        st.markdown("**포함할 항목 (체크박스)**")
+        inc_summary = st.checkbox("✅ 핵심 지표 요약 (Executive Summary)", value=True)
+        inc_interview = st.checkbox("✅ 데이터 기반 맞춤형 면담 가이드", value=True)
+        inc_raw = st.checkbox("✅ 5대 체감 지표 메타데이터", value=True)
+        
+        file_format = st.radio("파일 포맷", ["TXT (일반 텍스트)", "MD (마크다운 포맷)"], horizontal=True)
+
+    # 선택된 옵션에 따라 다운로드 텍스트 동적 조립
     ext = "txt" if "TXT" in file_format else "md"
-    report_content = f"# LABMATCH 최종 리포트\n\n## 1. 요약 결과\n- {st.session_state.summary_1}\n- {st.session_state.summary_2}\n\n## 2. 면담 질문 가이드\n- 사수 배정 및 프로젝트 진행 방식 확인\n- 신입생 연구 주제 선정 자율성 확인"
+    report_lines = [f"# LABMATCH 최종 비교 분석 리포트\n분석 대상: {prof_a} vs {prof_b}\n"]
     
+    if inc_summary:
+        report_lines.append(f"## 1. 핵심 지표 요약\n- 연구 역량: {st.session_state.summary_1}\n- 협업 생태계: {st.session_state.summary_2}\n")
+    if inc_interview:
+        report_lines.append(f"## 2. 맞춤형 면담 가이드\n- [{prof_a} 교수님]: 신입생 과제 배정 방식 및 주저자 참여 기회 질의\n- [{prof_b} 교수님]: 내부 사수 멘토링 체계 및 연구 연속성 유지 비결 질의\n")
+    if inc_raw:
+        report_lines.append("## 3. 체감 지표 메타데이터\n- 탑티어 비중 / 산학 협력 / 융합도 / 연구실 규모 / 산출 연속성 데이터 포함 완료\n")
+        
+    report_content = "\n".join(report_lines)
+
     with col_dl:
         st.write("")
-        st.download_button(f"📄 {ext.upper()} 리포트 다운로드", data=report_content.encode("utf-8"), file_name=f"labmatch_report.{ext}", use_container_width=True)
+        st.write("")
+        st.download_button(
+            label=f"📥 {ext.upper()} 커스텀 리포트 다운로드", 
+            data=report_content.encode("utf-8"), 
+            file_name=f"labmatch_custom_report.{ext}", 
+            use_container_width=True
+        )
 
     st.divider()
     if st.button("⬅️ 지표 화면으로 돌아가기", use_container_width=True):
