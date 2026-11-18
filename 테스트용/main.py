@@ -137,6 +137,8 @@ with top_btn3:
           - 송민 (Min Song)
           - 김기영 (Kiyoung Kim)
           - 주영준 (Youngjoon Joo)
+          - 이지연 (Jiyeon Lee)
+          - 김성언 (Seongeon Kim)
         """)
 
 # =========================================================
@@ -150,21 +152,23 @@ if st.session_state.step == 1:
         st.markdown("<p style='text-align: center; font-size: 18px; color: #94A3B8; margin-bottom: 35px;'>예비 대학원생을 위한 연구실 1:1 체감 지표 비교 플랫폼</p>", unsafe_allow_html=True)
 
         lab_a_input = st.text_input("첫 번째 교수님 성함 입력", value=st.session_state.query_a, placeholder="예: 송민 (한글/영문 모두 가능)")
-        lab_b_input = st.text_input("두 번째 교수님 성함 입력", value=st.session_state.query_b, placeholder="예: 주영준 (한글/영문 모두 가능)")
+        lab_b_input = st.text_input("두 번째 교수님 성함 입력", value=st.session_state.query_b, placeholder="예: 김성언 (한글/영문 모두 가능)")
         st.write("\n")
 
         if st.button("🔍 동명이인 확인 및 교수님 검색", use_container_width=True):
             if not lab_a_input.strip() or not lab_b_input.strip():
                 st.error("⚠️ 교수님 성함을 모두 입력해 주세요!")
             else:
-                # 💡 연세대학교 교수님 전용 한글 매핑 확장
+                # 💡 연세대학교 교수님 전용 한글 매핑 확장 (김성언 교수님 추가)
                 name_map = {
                     "손광훈": "Kwanghoon Sohn",
                     "함범섭": "Bumsub Ham",
                     "황도식": "Dosik Hwang",
                     "송민": "Min Song",
                     "김기영": "Kiyoung Kim",
-                    "주영준": "Youngjoon Joo"
+                    "주영준": "Youngjoon Joo",
+                    "이지연": "Jiyeon Lee",
+                    "김성언": "Seongeon Kim"  # 만약 검색이 안 된다면 "Sungeon Kim" 등으로 스펠링을 수정해보세요!
                 }
                 query_a_eng = name_map.get(lab_a_input.strip(), lab_a_input.strip())
                 query_b_eng = name_map.get(lab_b_input.strip(), lab_b_input.strip())
@@ -178,14 +182,14 @@ if st.session_state.step == 1:
                 st.session_state.step = 2
                 st.rerun()
 
-        # 💡 [핵심 구현] 연세대 전용 세로 스크롤 전광판
+        # 💡 [핵심 구현] 연세대 전용 세로 스크롤 전광판 (김성언 교수님 추가)
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown("""
         <div style="background-color: #f8fafc; padding: 20px 15px; border-radius: 10px; border: 1px solid #e2e8f0; height: 100px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05); text-align: center;">
             <marquee direction="up" scrollamount="2" style="color: #334155; font-size: 15px; font-weight: 600; line-height: 2;">
                 🚀 [OpenAlex 실시간 연동] 연세대학교 추천 검색 명단<br>
                 ⭐️ 공대/인공지능: 손광훈 / 함범섭 / 황도식<br>
-                ⭐️ 문헌정보학: 송민 / 김기영 / 주영준<br>
+                ⭐️ 문헌정보학: 송민 / 김기영 / 주영준 / 이지연 / 김성언<br>
                 💡 검색창에 한글 이름을 입력하고 데이터를 직접 확인해 보세요!
             </marquee>
         </div>
