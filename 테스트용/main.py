@@ -2,7 +2,7 @@ import streamlit as st
 import requests
 from pathlib import Path
 
-# 조원들이 보내준 5개의 지표 함수 모두 불러오기!
+# 조원들이 보내준 5개의 지표 함수 모두 불러오기
 from practice1 import render_toptier
 from practice2 import render_industry_collab
 from practice3 import render_interdisciplinarity
@@ -52,21 +52,17 @@ def fetch_openalex_lab_data_by_id(author_id, author_name):
         pub_date = w.get("publication_date")
         authorships = w.get("authorships", [])
 
-        # 지표 4, 5번 용
         lab_dict["works"].append({"id": w["id"], "year": year, "publication_year": year, "publication_date": pub_date, "authorships": authorships})
         
-        # 지표 3번 용 (분야)
         concepts = [c["display_name"] for c in w.get("concepts", []) if c.get("level", 1) == 0]
         lab_dict["interdisciplinarity_demo_papers"].append({"id": w["id"], "title": w.get("title", ""), "year": year, "field_ids": concepts})
 
-        # 💡 지표 1번 용 (탑티어 판별을 위한 게재처 데이터 추출 추가)
         venue_name = w.get("primary_location", {}).get("source", {})
         venue_name = venue_name.get("display_name", "") if venue_name else ""
         lab_dict["toptier_papers"].append({
             "title": w.get("title", ""), "year": year, "venue": venue_name, "type": w.get("type", ""), "url": w.get("id", "")
         })
 
-        # 지표 2번 용
         is_external = False
         is_industry = False
         for auth in authorships:
@@ -96,8 +92,8 @@ st.markdown(
 
 # 3. Session State 초기화
 if "step" not in st.session_state: st.session_state.step = 1
-if "query_a" not in st.session_state: st.session_state.query_a = "Kwanghoon Sohn"
-if "query_b" not in st.session_state: st.session_state.query_b = "Bumsub Ham"
+if "query_a" not in st.session_state: st.session_state.query_a = ""
+if "query_b" not in st.session_state: st.session_state.query_b = ""
 if "cands_a" not in st.session_state: st.session_state.cands_a = []
 if "cands_b" not in st.session_state: st.session_state.cands_b = []
 if "data_a" not in st.session_state: st.session_state.data_a = None
@@ -106,11 +102,11 @@ if "summary_1" not in st.session_state: st.session_state.summary_1 = ""
 if "summary_2" not in st.session_state: st.session_state.summary_2 = ""
 
 # =========================================================
-# [공통 상단 바]
+# [공통 상단 바] 3개의 팝업 메뉴로 확장
 # =========================================================
-top_spacer, top_btn1, top_btn2 = st.columns([6.5, 1.7, 1.8])
+top_spacer, top_btn1, top_btn2, top_btn3 = st.columns([4.5, 1.9, 1.9, 1.7])
 with top_btn1:
-    with st.popover("📊 5대 핵심 체감 지표 안내", use_container_width=True):
+    with st.popover("📊 5대 체감 지표 안내", use_container_width=True):
         st.markdown("""
         | 지표명 | 이용자 관점 질문 | 화면 시각화 안내 |
         |---|---|---|
@@ -121,11 +117,27 @@ with top_btn1:
         | **5. 연구 산출 연속성** | 논문이 끊김 없이 꾸준히 나오는가? | 🚦 신호등 배지 + 꺾은선 |
         """)
 with top_btn2:
-    with st.popover("⚠️ 분석 시 주의 사항 및 한계점", use_container_width=True):
+    with st.popover("⚠️ 분석 시 주의 사항", use_container_width=True):
         st.markdown("""
         - **동명이인 (저자 식별):** 글로벌 DB 특성상 동명이인이 혼재할 수 있어, 검색 후 소속 기관명으로 교차 검증하는 과정이 포함되어 있습니다.
         - **영문 검색 원칙:** 기계 번역과 실제 공식 논문 영문명의 불일치를 막고자 영문 검색을 원칙으로 합니다.
         - **빠른 시연을 위한 제한:** 웹사이트 과부하 방지 및 쾌적한 데모를 위해 연구자별 **최근 논문 100편**으로 분석 범위를 제한했습니다.
+        """)
+with top_btn3:
+    with st.popover("👨‍🏫 초심자용 연구자 리스트", use_container_width=True):
+        st.markdown("""
+        **[📌 랩매치 추천 검색 명단]**  
+        검색창에 아래 한글 이름을 복사해서 붙여넣어 보세요! 시스템이 자동으로 영문 변환하여 찾아줍니다.
+        
+        * **연세대학교 인공지능융합대학**
+          - 함범섭 (Bumsub Ham)
+        * **연세대학교 공과대학**
+          - 손광훈 (Kwanghoon Sohn)
+        * **연세대학교 문과대학 (문헌정보학)**
+          - 김기영 (Kiyoung Kim)
+          - 주영준 (Youngjoon Joo)
+        * **글로벌 AI 석학 (테스트용)**
+          - 앤드류 응 (Andrew Ng)
         """)
 
 # =========================================================
@@ -138,15 +150,24 @@ if st.session_state.step == 1:
         st.markdown("<h1 style='text-align: center; font-size: 60px; margin-bottom: 0px;'>🔬 LABMATCH</h1>", unsafe_allow_html=True)
         st.markdown("<p style='text-align: center; font-size: 18px; color: #94A3B8; margin-bottom: 35px;'>예비 대학원생을 위한 연구실 1:1 체감 지표 비교 플랫폼</p>", unsafe_allow_html=True)
 
-        lab_a_input = st.text_input("첫 번째 교수님 성함 입력", value=st.session_state.query_a)
-        lab_b_input = st.text_input("두 번째 교수님 성함 입력", value=st.session_state.query_b)
-        st.write("\n\n")
+        lab_a_input = st.text_input("첫 번째 교수님 성함 입력", value=st.session_state.query_a, placeholder="예: 손광훈 (한글/영문 모두 가능)")
+        lab_b_input = st.text_input("두 번째 교수님 성함 입력", value=st.session_state.query_b, placeholder="예: 함범섭 (한글/영문 모두 가능)")
+        st.write("\n")
 
         if st.button("🔍 동명이인 확인 및 교수님 검색", use_container_width=True):
             if not lab_a_input.strip() or not lab_b_input.strip():
                 st.error("⚠️ 교수님 성함을 모두 입력해 주세요!")
             else:
-                name_map = {"손광훈": "Kwanghoon Sohn", "함범섭": "Bumsub Ham"}
+                # 💡 안전한 데모를 위한 한글 -> 영문 자동 매핑 사전 확장
+                name_map = {
+                    "손광훈": "Kwanghoon Sohn",
+                    "함범섭": "Bumsub Ham",
+                    "김기영": "Kiyoung Kim",
+                    "주영준": "Youngjoon Joo",
+                    "앤드류 응": "Andrew Ng",
+                    "앤드류응": "Andrew Ng",
+                    "Andrew Ng": "Andrew Ng"
+                }
                 query_a_eng = name_map.get(lab_a_input.strip(), lab_a_input.strip())
                 query_b_eng = name_map.get(lab_b_input.strip(), lab_b_input.strip())
                 
@@ -158,6 +179,16 @@ if st.session_state.step == 1:
                     st.session_state.cands_b = search_author_candidates(query_b_eng)
                 st.session_state.step = 2
                 st.rerun()
+
+        # 💡 [핵심 구현] 시각적 효과를 위한 실시간 움직이는 전광판 (Marquee)
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown("""
+        <div style="background-color: #f8fafc; padding: 12px 15px; border-radius: 10px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+            <marquee direction="left" scrollamount="6" style="color: #334155; font-size: 15px; font-weight: 600;">
+                🚀 [OpenAlex 실시간 연동 중] 추천 검색어: 연세대 인공지능융합대학 함범섭 교수 ⭐️ 연세대 공과대학 손광훈 교수 ⭐️ 연세대 문헌정보학과 김기영 교수 ⭐️ 연세대 문헌정보학과 주영준 교수 ⭐️ 검색창에 한글 이름을 입력하고 데이터를 직접 확인해 보세요!
+            </marquee>
+        </div>
+        """, unsafe_allow_html=True)
 
 # =========================================================
 # [STEP 2] 동명이인 걸러내기 및 에러 친절 피드백
@@ -214,7 +245,6 @@ elif st.session_state.step == 3:
     with tab1: 
         try:
             res_1 = render_toptier(data_a, data_b)
-            # 탑티어 지표 요약 문장 조립
             n_top_a = res_1["lab_a"]["n_top"]
             n_top_b = res_1["lab_b"]["n_top"]
             st.session_state.summary_1 = f"{data_a['professor']} 연구실은 최근 {n_top_a}편, {data_b['professor']} 연구실은 {n_top_b}편의 탑티어 논문을 게재했습니다."
