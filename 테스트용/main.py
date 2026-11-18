@@ -184,7 +184,7 @@ if st.session_state.step == 1:
 
         st.markdown("<br>", unsafe_allow_html=True)
         
-        # 공통 CSS (마우스 오버 시 멈추는 애니메이션 포함)
+        # 💡 개선된 공통 CSS (마스크 그라데이션 페이드 효과 + 부드러운 % 기반 애니메이션)
         st.markdown("""
         <style>
         .dashboard-box {
@@ -194,19 +194,19 @@ if st.session_state.step == 1:
             padding: 15px;
             box-shadow: 0 1px 3px rgba(0,0,0,0.05);
             margin-bottom: 20px;
+            overflow: hidden; /* 박스 밖으로 삐져나가는 현상 원천 차단 */
         }
-        .ticker-wrap {
-            height: 90px;
+        .ticker-wrap, .ticker-wrap-tall {
             overflow: hidden;
             position: relative;
             cursor: pointer;
+            /* 텍스트가 위아래 경계에서 서서히 사라지도록 그라데이션 페이드 효과 적용 */
+            -webkit-mask-image: linear-gradient(to bottom, transparent, black 15%, black 85%, transparent);
+            mask-image: linear-gradient(to bottom, transparent, black 15%, black 85%, transparent);
         }
-        .ticker-wrap-tall {
-            height: 220px;
-            overflow: hidden;
-            position: relative;
-            cursor: pointer;
-        }
+        .ticker-wrap { height: 90px; }
+        .ticker-wrap-tall { height: 220px; }
+        
         .ticker-content {
             text-align: center;
             color: #334155;
@@ -217,25 +217,25 @@ if st.session_state.step == 1:
             width: 100%;
         }
         
-        /* 첫 번째 전광판 (연세대) 애니메이션 */
+        /* 첫 번째 전광판 (연세대) 애니메이션 - 비율(%)을 사용하여 궤도 보정 */
         .anim-y { animation: scrollUpY 12s linear infinite; }
         .ticker-wrap:hover .anim-y { animation-play-state: paused; }
         @keyframes scrollUpY {
-            0% { transform: translateY(90px); }
-            100% { transform: translateY(-160px); }
+            0% { top: 100%; transform: translateY(0); }
+            100% { top: 0; transform: translateY(-100%); }
         }
         
         /* 두 번째 전광판 (AI 트렌드) 애니메이션 */
         .anim-ai { animation: scrollUpAI 20s linear infinite; }
         .ticker-wrap-tall:hover .anim-ai { animation-play-state: paused; }
         @keyframes scrollUpAI {
-            0% { transform: translateY(220px); }
-            100% { transform: translateY(-350px); }
+            0% { top: 100%; transform: translateY(0); }
+            100% { top: 0; transform: translateY(-100%); }
         }
         </style>
         """, unsafe_allow_html=True)
 
-        # 💡 [구현 1] 출처를 명시한 연세대 전광판
+        # 💡 출처를 명시한 연세대 전광판
         st.markdown("""
         <div class="dashboard-box">
             <h4 style="margin-top:0px; margin-bottom: 10px; color:#1F2937; text-align:center;">🦅 연세대학교 연구자 리스트 기반 추천 명단</h4>
@@ -251,7 +251,7 @@ if st.session_state.step == 1:
         </div>
         """, unsafe_allow_html=True)
 
-        # 💡 [구현 2 & 3] 핫 트렌드 전광판 + OpenAlex 및 융합 키워드 채우기
+        # 💡 핫 트렌드 전광판 + OpenAlex 및 융합 키워드 채우기
         hot_col1, hot_col2 = st.columns(2)
         with hot_col1:
             st.markdown("""
