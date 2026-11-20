@@ -95,6 +95,14 @@ def _guess_professor(works):
     return max(cnt, key=cnt.get) if cnt else ""
 
 
+def _clean_name(name):
+    """'Samsung (South Korea)' -> 'Samsung' (OpenAlex 기업명 뒤 국가 표기 제거)"""
+    name = (name or "").strip()
+    if name.endswith(")") and " (" in name:
+        name = name[:name.rindex(" (")].strip()
+    return name
+
+
 def _compute_from_works(lab):
     works = [w for w in lab.get("works", []) if w.get("publication_year") in YEARS]
     author_id = lab.get("author_id") or lab.get("professor_id") or _guess_professor(works)
@@ -110,8 +118,8 @@ def _compute_from_works(lab):
         others = [a for a in auths if not _is_professor(a, author_id)]
         other_insts = [i for a in others for i in (a.get("institutions") or [])]
 
-        companies = {i.get("display_name") for i in other_insts if i.get("type") == "company"}
-        companies.discard(None)
+        companies = {_clean_name(i.get("display_name")) for i in other_insts if i.get("type") == "company"}
+        companies.discard("")
         is_industry = bool(companies)
         is_external = any(not (_inst_ids(i) & home) for i in other_insts) if home else bool(other_insts)
 
@@ -168,6 +176,13 @@ def compute_industry_collab(lab):
 
 
 # ---------- 2. 화면 ----------
+# 팀 공통 스타일 (① practice1.py와 같은 색·카드 형식)
+COLOR = ("#3D5A80", "#5E8C83")   # 연구실 A, B
+LIGHT = ("#E3E8EF", "#E2ECEA")
+TEXT, MUTE, LINE = "#31333F", "#6b7280", "#e6e8ec"
+TITLE = "font-size:13px;color:#6b7280;font-weight:700;margin-bottom:6px"
+PENDING = f"<div style='font-size:13px;color:{MUTE}'>정보 없음 · 수집 예정</div>"
+
 
 def _iga(name):
     """이름 뒤 조사 '이/가' 자동 선택 (한글은 받침, 영문은 끝 글자로 판단)"""
@@ -179,80 +194,127 @@ def _iga(name):
     return "가" if ch.lower() in "aeiouy" else "이"
 
 
-PENDING = ("<span style='display:inline-block;padding:3px 10px;border-radius:999px;"
-           "background:#f3f4f6;color:#6b7280;font-size:13px'>정보 없음 · 수집 예정</span>")
+
+def _badge(mine, other, unit="%p"):
+    """두 연구실 중 더 높은 쪽에만 +차이 배지"""
+    if mine is None or other is None or mine <= other:
+        return ""
+    return (f"<span style='font-size:12px;padding:1px 8px;border-radius:999px;background:#F0F2F6;"
+            f"border:1px solid #e1e4ea;color:{TEXT};margin-left:6px'>+{mine - other:.3g}{unit}</span>")
 
 
-def _pills(partners):
-    """파트너 기업 이름을 알약 모양 태그로 (논문 수 많은 순 5개)"""
+def _gauge(label, value, n, other_value, color, light, note=""):
+    """가로 게이지 1줄 (0~100%, 두 연구실 같은 기준)"""
+    note_html = f"<div style='font-size:12px;color:{MUTE};margin-top:4px'>{note}</div>" if note else ""
+    return (
+        f"<div style='margin-top:14px'>"
+        f"<div style='{TITLE}'>{label}{_badge(value, other_value)}</div>"
+        f"<div style='display:flex;align-items:baseline;gap:6px'>"
+        f"<span style='font-size:30px;font-weight:800;line-height:1;color:{color}'>{value:.3g}"
+        f"<span style='font-size:16px'>%</span></span>"
+        f"<span style='font-size:13px;color:{MUTE}'>{n}편</span></div>"
+        f"<div style='height:12px;background:{light};border-radius:999px;overflow:hidden;margin:8px 0 0'>"
+        f"<div style='height:100%;width:{min(value, 100):.0f}%;background:{color};border-radius:999px'></div></div>"
+        f"{note_html}</div>"
+    )
+
+
+def _stickers(partners, top_n=6):
+    """파트너 기업 태그 (① 탑티어 게재처 태그와 같은 모양)"""
     if not partners:
         return PENDING
-    style = ("display:inline-block;padding:3px 10px;margin:2px;border-radius:999px;"
-             "background:#eef2ff;color:#3730a3;font-size:13px")
-    top = sorted(partners, key=lambda p: -p.get("count", 0))[:5]
-    return "".join(f"<span style='{style}'>{p['name']} · {p.get('count', 0)}편</span>" for p in top)
+    top = sorted(partners, key=lambda p: -p.get("count", 0))[:top_n]
+    return "".join(
+        f"<span style='display:inline-flex;align-items:center;gap:6px;font-weight:700;border-radius:8px;"
+        f"padding:4px 10px;margin:4px 3px;color:{TEXT};background:#fff;border:1px solid #d5d9e0;"
+        f"box-shadow:0 1px 0 {LINE};font-size:13px'>{p['name']}"
+        f"<b style='background:#F0F2F6;border-radius:999px;font-size:11px;padding:1px 6px;font-weight:600'>"
+        f"{p.get('count', 0)}</b></span>"
+        for p in top
+    )
+
+
+def _panel(r, other, idx):
+    color, light = COLOR[idx], LIGHT[idx]
+    prof = f"{r['professor']} 교수 · " if r["professor"] else ""
+    led_note = ""
+    if r["led_ratio"] is not None and r["industry"]:
+        led_note = f"그중 우리 랩 주도(1저자·교신) {r['led']}편 ({r['led_ratio']:.3g}%)"
+    return (
+        f"<div style='border:1px solid {LINE};border-radius:12px;overflow:hidden;background:#fff;"
+        f"border-top:4px solid {color};padding-bottom:16px'>"
+        f"<div style='padding:12px 20px 10px;border-bottom:1px solid #eef0f3'>"
+        f"<div style='font-size:20px;font-weight:800;color:{color}'>{r['lab_name']}</div>"
+        f"<div style='font-size:13px;color:{MUTE}'>{prof}논문 {r['total']}편</div></div>"
+        f"<div style='padding:0 20px'>"
+        + _gauge("기업 공저 비율", r["industry_ratio"], r["industry"], other["industry_ratio"], color, light, led_note)
+        + _gauge("외부 기관 협업 비율", r["external_ratio"], r["external"], other["external_ratio"], color, light,
+                 "같은 대학 공저자는 제외")
+        + f"<div style='margin-top:16px'><div style='{TITLE}'>주요 파트너 기업</div>{_stickers(r['partners'])}</div>"
+        f"</div></div>"
+    )
+
+
+def _split_chart(ra, rb):
+    """논문 구성 3분할 (기업 협업 / 기타 외부 / 내부)"""
+    import altair as alt
+    order = ["기업 협업", "기타 외부 기관", "내부 연구"]
+    rows = [{"연구실": r["lab_name"], "구분": k, "비율": r["split"][k], "순서": i}
+            for r in (ra, rb) for i, k in enumerate(order)]
+    data = pd.DataFrame(rows)
+    labs = [ra["lab_name"], rb["lab_name"]]
+    bars = alt.Chart(data).mark_bar(cornerRadius=3).encode(
+        y=alt.Y("연구실:N", sort=labs, title=None, axis=alt.Axis(labelLimit=220)),
+        x=alt.X("비율:Q", title="논문 비율 (%)", scale=alt.Scale(domain=[0, 100])),
+        color=alt.Color("구분:N", sort=order, title=None, legend=alt.Legend(orient="top"),
+                        scale=alt.Scale(domain=order, range=["#3D5A80", "#98B3CF", "#E5E7EB"])),
+        order=alt.Order("순서:Q"),
+        tooltip=["연구실", "구분", "비율"])
+    return bars.properties(height=alt.Step(44))
 
 
 def _trend_chart(ra, rb):
     """연도별 기업 공저 비율 꺾은선"""
-    st.markdown("**연도별 기업 공저 비율 추이 (%)**")
-    if not ra["yearly"] and not rb["yearly"]:
-        st.markdown(PENDING, unsafe_allow_html=True)
-        return
-    trend = pd.DataFrame({ra["lab_name"]: pd.Series(ra["yearly"]),
-                          rb["lab_name"]: pd.Series(rb["yearly"])}).sort_index()
-    trend.index = trend.index.astype(str)
-    st.line_chart(trend)
+    import altair as alt
+    rows = [{"연도": str(y), "연구실": r["lab_name"], "기업 공저 비율": v}
+            for r in (ra, rb) for y, v in sorted(r["yearly"].items())]
+    if not rows:
+        return None
+    labs = [ra["lab_name"], rb["lab_name"]]
+    return alt.Chart(pd.DataFrame(rows)).mark_line(point=True, strokeWidth=3).encode(
+        x=alt.X("연도:O", title=None, axis=alt.Axis(labelAngle=0)),
+        y=alt.Y("기업 공저 비율:Q", title="기업 공저 비율 (%)", scale=alt.Scale(domain=[0, 100])),
+        color=alt.Color("연구실:N", scale=alt.Scale(domain=labs, range=list(COLOR)),
+                        legend=alt.Legend(orient="top", title=None)),
+        tooltip=["연구실", "연도", "기업 공저 비율"]).properties(height=260)
 
 
 def _bubble_chart(ra, rb):
     """파트너 기업 버블: 크기 = 공저 논문 수, 두 랩 공통 기업은 가운데"""
-    st.markdown("**파트너 기업 버블 (크기 = 공저 논문 수)**")
+    import altair as alt
     a = {p["name"]: p.get("count", 0) for p in ra["partners"]}
     b = {p["name"]: p.get("count", 0) for p in rb["partners"]}
     if not a and not b:
-        st.markdown(PENDING, unsafe_allow_html=True)
-        return
-
-    import altair as alt  # streamlit 설치 시 함께 설치됨
-
+        return None
+    groups = [(ra["lab_name"], -1, [n for n in a if n not in b], COLOR[0]),
+              ("공통 파트너", 0, [n for n in a if n in b], "#9CA3AF"),
+              (rb["lab_name"], 1, [n for n in b if n not in a], COLOR[1])]
     rows = []
-    groups = [(ra["lab_name"], -1, [n for n in a if n not in b]),
-              ("공통 파트너", 0, [n for n in a if n in b]),
-              (rb["lab_name"], 1, [n for n in b if n not in a])]
-    for group, pos, names in groups:
-        for i, n in enumerate(sorted(names, key=lambda n: -(a.get(n, 0) + b.get(n, 0)))):
-            rows.append({"name": n, "group": group, "pos": pos, "row": -i,
-                         "count": a.get(n, 0) + b.get(n, 0)})
+    for group, pos, names, _ in groups:
+        for i, n in enumerate(sorted(names, key=lambda n: -(a.get(n, 0) + b.get(n, 0)))[:8]):
+            rows.append({"기업": n, "구분": group, "pos": pos, "row": -i, "공저 논문 수": a.get(n, 0) + b.get(n, 0)})
     df = pd.DataFrame(rows)
-
+    depth = max(len(g[2][:8]) for g in groups)
     base = alt.Chart(df).encode(
         x=alt.X("pos:Q", scale=alt.Scale(domain=[-1.7, 1.7]), axis=None),
-        y=alt.Y("row:Q", scale=alt.Scale(domain=[-max(len(g[2]) for g in groups), 1]), axis=None),
-    )
-    bubbles = base.mark_circle(opacity=0.6).encode(
-        size=alt.Size("count:Q", scale=alt.Scale(range=[400, 4000]), legend=None),
-        color=alt.Color("group:N", title="",
-                        scale=alt.Scale(domain=[g[0] for g in groups],
-                                        range=["#4f46e5", "#10b981", "#f97316"])),
-        tooltip=["name", "group", "count"],
-    )
-    labels = base.mark_text(fontSize=12).encode(text="name:N")
-    st.altair_chart((bubbles + labels).properties(height=80 + 70 * max(len(g[2]) for g in groups)))
-
-
-def _lab_column(r):
-    st.markdown(f"#### {r['lab_name']}")
-    prof = f"{r['professor']} 교수 · " if r["professor"] else ""
-    st.caption(f"{prof}2021~2025년 논문 {r['total']}편 기준")
-    st.write(f"기업 공저 **{r['industry_ratio']}%** ({r['industry']}편)")
-    st.progress(min(r["industry_ratio"] / 100, 1.0))
-    if r["led_ratio"] is not None and r["industry"]:
-        st.caption(f"└ 그중 우리 랩 주도(1저자·교신) {r['led']}편 ({r['led_ratio']}%)")
-    st.write(f"외부 기관 협업 **{r['external_ratio']}%** ({r['external']}편)")
-    st.progress(min(r["external_ratio"] / 100, 1.0))
-    st.markdown("**주요 파트너 기업**")
-    st.markdown(_pills(r["partners"]), unsafe_allow_html=True)
+        y=alt.Y("row:Q", scale=alt.Scale(domain=[-depth, 1]), axis=None))
+    bubbles = base.mark_circle(opacity=0.75).encode(
+        size=alt.Size("공저 논문 수:Q", scale=alt.Scale(range=[300, 2500]), legend=None),
+        color=alt.Color("구분:N", title=None, legend=alt.Legend(orient="top"),
+                        scale=alt.Scale(domain=[g[0] for g in groups], range=[g[3] for g in groups])),
+        tooltip=["기업", "구분", "공저 논문 수"])
+    labels = base.mark_text(fontSize=12, fontWeight="bold", dy=-34, color="#9CA3AF").encode(text="기업:N")  # 라이트·다크 모두 보이는 회색
+    return (bubbles + labels).properties(height=100 + 100 * depth)
 
 
 def _preference_sentence(ra, rb, level):
@@ -268,42 +330,49 @@ def _preference_sentence(ra, rb, level):
 
 
 def render_industry_collab(lab_a, lab_b):
-    """조장이 import해서 부르는 함수: 두 연구실 데이터를 받아 지표 2 화면을 그림"""
+    """main.py에서 부르는 함수: 두 연구실 데이터를 받아 지표 2 화면을 그림"""
     ra, rb = compute_industry_collab(lab_a), compute_industry_collab(lab_b)
 
-    st.subheader("🤝 기업 과제 중심인가, 학술 연구 중심인가?")
-    with st.expander("ⓘ 계산 방법과 한계"):
-        st.markdown(
-            "- 분석 기간: **2021~2025년** (5개 지표 공통)\n"
-            "- **기업 공저 비율** = 교수 외 공저자 중 기업 소속이 있는 논문 수 ÷ 전체 논문 수\n"
-            "- **외부 기관 협업** = 교수 외 공저자 중 교수 소속 대학이 아닌 기관이 있는 논문 수 ÷ 전체 논문 수 "
-            "(같은 대학 공저자는 외부로 세지 않음)\n"
-            "- **우리 랩 주도** = 기업 공저 논문 중 1저자 또는 마지막(교신) 저자가 우리 랩인 논문\n"
-            "- 출처: OpenAlex 공저자 소속 정보\n"
-            "- 한계: 공동 '과제'가 아니라 공동 '논문' 기준이에요. 소속 정보가 빠진 논문은 "
-            "협업 없음으로 세어져 실제보다 낮을 수 있어요."
-        )
+    st.subheader("2. 산학·외부 협업 비율")
+    st.caption(f"기업 과제를 경험할 수 있을까? 학교 밖과 얼마나 함께 연구하나? · {YEARS[0]}–{YEARS[-1]}")
 
-    # (1) 좌우 비교 카드: 게이지 바 + 파트너 태그
-    col_a, col_b = st.columns(2)
-    with col_a:
-        _lab_column(ra)
-    with col_b:
-        _lab_column(rb)
+    # (1) 연구실별 카드: 게이지 2줄 + 파트너 기업 태그
+    col_a, col_b = st.columns(2, gap="medium")
+    col_a.markdown(_panel(ra, rb, 0), unsafe_allow_html=True)
+    col_b.markdown(_panel(rb, ra, 1), unsafe_allow_html=True)
 
-    # (2) 논문 구성 3분할 막대 (산학 vs 학술 한눈에)
-    st.markdown("**논문 구성 비교 (%)**")
-    split = pd.DataFrame([ra["split"], rb["split"]], index=[ra["lab_name"], rb["lab_name"]])
-    st.bar_chart(split, horizontal=True, color=["#4f46e5", "#a5b4fc", "#e5e7eb"])
-
-    # (3) 연도별 추이 + (4) 기업 버블 (데이터 없으면 '수집 예정')
-    _trend_chart(ra, rb)
-    _bubble_chart(ra, rb)
-
-    # (5) 이용자 선호 선택 → 해석 문장
+    # (2) 이용자 선호 → 해석 문장
+    st.write("")
     level = st.radio("나에게 기업·외부 협업은 얼마나 중요한가요?",
                      ["매우 중요", "보통", "상관없음"], horizontal=True, key="industry_pref")
     st.info(_preference_sentence(ra, rb, level))
+
+    # (3) 상세 그래프 탭
+    t1, t2, t3 = st.tabs(["논문 구성", "연도별 추이", "파트너 기업"])
+    with t1:
+        st.caption("진한 색 = 기업과 함께 쓴 논문 · 중간 = 다른 대학·기관과 쓴 논문 · 연한 색 = 우리 대학 안에서 쓴 논문")
+        st.altair_chart(_split_chart(ra, rb), use_container_width=True)
+    with t2:
+        chart = _trend_chart(ra, rb)
+        if chart is None:
+            st.caption("연도별 정보 없음 · 수집 예정")
+        else:
+            st.caption("연도별 기업 공저 논문 비율 (%)")
+            st.altair_chart(chart, use_container_width=True)
+    with t3:
+        chart = _bubble_chart(ra, rb)
+        if chart is None:
+            st.caption("기업 공저 논문이 없어요.")
+        else:
+            st.caption("버블 크기 = 함께 쓴 논문 수 · 가운데 = 두 연구실 공통 파트너")
+            st.altair_chart(chart, use_container_width=True)
+
+    st.caption(
+        "기업 공저 = 교수 외 공저자 중 기업 소속이 있는 논문 ÷ 전체 · "
+        "외부 협업 = 교수 소속 대학이 아닌 기관 공저자가 있는 논문 ÷ 전체 · "
+        "우리 랩 주도 = 기업 공저 논문 중 1저자·교신저자가 우리 랩 · 출처: OpenAlex · "
+        "공동 '과제'가 아닌 공동 '논문' 기준이며, 소속 정보가 없는 저자는 제외돼요."
+    )
 
     # 3줄 Brief용: 격차 점수(0~1)와 한 줄 요약 (main.py에서 자동 조립)
     d_ind = abs(ra["industry_ratio"] - rb["industry_ratio"])
