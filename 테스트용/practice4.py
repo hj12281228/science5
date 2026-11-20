@@ -104,17 +104,30 @@ def _render_one(r):
         st.caption("공저 구성원 정보 없음")
         return
     st.markdown(_icon_grid(r), unsafe_allow_html=True)
+    n_other = r["active_members"] - r["senior_count"]
     st.markdown(
-        f"**{r['active_members']}명** 활동 · 그중 사수 후보 **{r['senior_count']}명** · {r['style']}"
+        f"총 **{r['active_members']}명** = 진한 아이콘(사수 후보) **{r['senior_count']}명** "
+        f"+ 연한 아이콘(일반 구성원) **{n_other}명**  \n협업 스타일: {r['style']}"
     )
 
 
 def render_lab_size(lab_a, lab_b, years=5):
     """메인 대시보드에서 호출: render_lab_size(lab_a_dict, lab_b_dict)"""
     st.subheader("④ 연구실 규모 및 사수 환경")
-    st.caption(
-        f"최근 {years}년 논문 기준 · 교수와 같은 기관 소속 공저자 = 구성원 · "
-        f"진한 아이콘 = 교수와 {MIN_COWORK}편 이상 함께 쓴 사수 후보"
+    st.caption(f"최근 {years}년 논문 기준 · 교수와 같은 기관 소속 공저자를 연구실 구성원으로 간주")
+
+    # 범례: 진한/연한 아이콘의 의미를 크게 표시
+    st.markdown(
+        f"""
+<div style="border:1px solid #ccc;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:17px">
+  <b>아이콘 읽는 법</b><br>
+  <span style="font-size:26px">👤</span> <b>진한 아이콘 = 사수 후보</b>
+  : 교수님과 논문을 <b>{MIN_COWORK}편 이상</b> 함께 써서, 연구를 오래 함께해 온 질문하기 좋은 선배<br>
+  <span style="font-size:26px;opacity:0.3">👤</span> <b>연한 아이콘 = 일반 구성원</b>
+  : 교수님과 논문을 1편 함께 쓴 연구실 구성원
+</div>
+""",
+        unsafe_allow_html=True,
     )
 
     ra, rb = compute_lab_size(lab_a, years), compute_lab_size(lab_b, years)
