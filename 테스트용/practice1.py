@@ -1,15 +1,15 @@
 """
-지표 1. 탑티어 논문 비중 및 건수
+지표 1. 우수 학회·저널 논문 비중 및 건수
 
 수식 (2021~2025)
-- 전체 논문 수 = 정식 게재 논문 수 (프리프린트 제외)
-- 탑티어 비중(%) = 탑티어 논문 수 / 전체 논문 수 * 100
-- 연평균 탑티어 = 탑티어 논문 수 / 활동 연수 (기간 중 첫 논문 연도부터)
+- 전체 논문 수 = 정식 게재 논문 수 (프리프린트·워크숍 제외)
+- 우수 학회·저널 비중(%) = 우수 학회·저널 논문 수 / 전체 논문 수 * 100
+- 연평균 우수 논문 = 우수 학회·저널 논문 수 / 활동 연수 (기간 중 첫 논문 연도부터)
 
-등급 규칙 (공개 등급표 기준)
-- 학회: ICORE/CORE 등급  A* = 탑티어, A = 중위권, 그 외 = 기타
-- 저널: CCF 추천 목록    A = 탑티어,  B = 중위권, 그 외 = 기타
-- 워크숍·Findings·프리프린트는 탑티어로 보지 않음
+판별 기준 (전 학문 분야 공통 OpenAlex 정량 지표)
+- 우수 학회·저널(1): 분야 보정 피인용 상위 10% 백분위(>= 0.90) 또는 저널 2년 평균 피인용(>= 5.0)
+- 중위권(2)        : 분야 보정 피인용 상위 25% 백분위(>= 0.75) 또는 저널 2년 평균 피인용(>= 2.5)
+- 기타(3)          : 그 외 정식 게재 논문
 """
 
 import json
@@ -23,43 +23,7 @@ import streamlit as st
 MOCK_PATH = Path(__file__).with_name("mock-up-data-toptier-demo.json")
 START, END = 2021, 2025
 
-# 등급표: 학회·저널을 추가하거나 등급을 바꿀 때 여기만 고치면 됨
-# ("^...$"는 게재처 이름이 정확히 같을 때만 인정)
-TIER_TABLE = {
-    # 학회 · CORE A* -> 탑티어
-    "CVPR": (1, ["CVPR", "Computer Vision and Pattern Recognition"]),
-    "ICCV": (1, ["ICCV", "International Conference on Computer Vision"]),
-    "ECCV": (1, ["ECCV", "European Conference on Computer Vision"]),
-    "NeurIPS": (1, ["NeurIPS", "NIPS", "Neural Information Processing Systems"]),
-    "ICML": (1, ["ICML", "International Conference on Machine Learning"]),
-    "ICLR": (1, ["ICLR", "International Conference on Learning Representations"]),
-    "AAAI": (1, ["AAAI"]),
-    "IJCAI": (1, ["IJCAI"]),
-    "ACL": (1, ["ACL", "Annual Meeting of the Association for Computational Linguistics"]),
-    "EMNLP": (1, ["EMNLP", "Empirical Methods in Natural Language Processing"]),
-    "KDD": (1, ["KDD", "Knowledge Discovery and Data Mining"]),
-    # 학회 · CORE A -> 중위권
-    "WACV": (2, ["WACV", "Winter Conference on Applications of Computer Vision"]),
-    "BMVC": (2, ["BMVC", "British Machine Vision Conference"]),
-    "NAACL": (2, ["NAACL", "North American Chapter of the Association for Computational Linguistics"]),
-    # 저널 · CCF A -> 탑티어
-    "TPAMI": (1, ["TPAMI", "Transactions on Pattern Analysis and Machine Intelligence"]),
-    "IJCV": (1, ["IJCV", "International Journal of Computer Vision"]),
-    "JMLR": (1, ["JMLR", "Journal of Machine Learning Research"]),
-    "AIJ": (1, ["^Artificial Intelligence$"]),
-    "TIP": (1, ["Transactions on Image Processing"]),
-    "TOG": (1, ["ACM Transactions on Graphics"]),
-    "TVCG": (1, ["Transactions on Visualization and Computer Graphics"]),
-    # 저널 · CCF B -> 중위권
-    "PR": (2, ["^Pattern Recognition$"]),
-    "TCSVT": (2, ["Transactions on Circuits and Systems for Video Technology"]),
-    "TMM": (2, ["IEEE Transactions on Multimedia"]),
-    "TNNLS": (2, ["Transactions on Neural Networks and Learning Systems"]),
-    "CVIU": (2, ["Computer Vision and Image Understanding"]),
-    "NN": (2, ["^Neural Networks$"]),
-    "TACL": (2, ["Transactions of the Association for Computational Linguistics"]),
-}
-TIER_LABEL = {1: "탑티어", 2: "중위권", 3: "기타"}
+TIER_LABEL = {1: "우수 학회·저널", 2: "중위권", 3: "기타"}
 
 # 연구실 색 (A, B) / 연한 색
 COLOR = ("#3D5A80", "#5E8C83")
@@ -68,18 +32,37 @@ TEXT, MUTE, LINE = "#31333F", "#6b7280", "#e6e8ec"
 
 _EXCLUDED_TYPES = {"preprint", "paratext", "erratum", "retraction", "editorial"}
 _NOT_MAIN = re.compile(r"workshop|findings|\b\w+W\)", re.IGNORECASE)
-_ALIASES = sorted(((a, k, t) for k, (t, al) in TIER_TABLE.items() for a in al),
-                  key=lambda x: len(x[0]), reverse=True)
 
 
-def classify_venue(venue):
+def _extract_percentile(p):
+    """OpenAlex citation_normalized_percentile 값 추출 (dict 또는 float 모두 대응)"""
+    cnp = p.get("citation_normalized_percentile")
+    if isinstance(cnp, dict):
+        return cnp.get("value")
+    if isinstance(cnp, (int, float)):
+        return float(cnp)
+    return None
+
+
+def classify_paper(p):
+    """사전 등급표 없이 OpenAlex 분야 보정 백분위 및 저널 영향력 지수로 등급 판별"""
+    venue = (p.get("venue") or "").strip()
     if not venue or _NOT_MAIN.search(venue):
         return 3, venue or "(게재처 없음)"
-    for alias, key, tier in _ALIASES:
-        pattern = (rf"{alias}" if alias.startswith("^")
-                   else rf"(?<![A-Za-z]){re.escape(alias)}(?![A-Za-z])")
-        if re.search(pattern, venue.strip(), re.IGNORECASE):
-            return tier, key
+
+    pct = _extract_percentile(p)
+    impact = p.get("2yr_mean_citedness")
+
+    is_top_pct = pct is not None and pct >= 0.90
+    is_top_imp = isinstance(impact, (int, float)) and impact >= 5.0
+    if is_top_pct or is_top_imp:
+        return 1, venue
+
+    is_mid_pct = pct is not None and pct >= 0.75
+    is_mid_imp = isinstance(impact, (int, float)) and impact >= 2.5
+    if is_mid_pct or is_mid_imp:
+        return 2, venue
+
     return 3, venue
 
 
@@ -101,7 +84,9 @@ def compute_toptier(lab, start=START, end=END):
             continue
         if (p.get("type") or "").lower() in _EXCLUDED_TYPES or p.get("venue_type") == "repository":
             continue
-        tier, key = classify_venue(p.get("venue"))
+        if _NOT_MAIN.search(p.get("venue") or ""):
+            continue
+        tier, key = classify_paper(p)
         rows.append({"year": int(y), "title": p.get("title", ""), "venue": key,
                      "tier": tier, "등급": TIER_LABEL[tier], "url": p.get("url")})
     df = pd.DataFrame(rows, columns=["year", "title", "venue", "tier", "등급", "url"])
@@ -170,7 +155,7 @@ def _stickers(r, top_n=6):
         return ""
     vc = r["df"][r["df"]["tier"] == 1]["venue"].value_counts().head(top_n)
     if vc.empty:
-        return f"<div style='font-size:13px;color:{MUTE}'>탑티어 게재 이력 없음</div>"
+        return f"<div style='font-size:13px;color:{MUTE}'>우수 학회·저널 게재 이력 없음</div>"
     mx = vc.max()
     return "".join(
         f"<span style='display:inline-flex;align-items:center;gap:6px;font-weight:700;border-radius:8px;"
@@ -193,20 +178,20 @@ def _panel(r, other, idx, max_top):
         f"border-top:4px solid {color};padding-bottom:16px'>"
         f"<div style='padding:12px 20px 10px;border-bottom:1px solid #eef0f3'>"
         f"<div style='font-size:20px;font-weight:800;color:{color}'>{r['lab_name']}</div>"
-        f"<div style='font-size:13px;color:{MUTE}'>{r['professor']} 교수 · 논문 {r['n_all']}편</div></div>"
+        f"<div style='font-size:13px;color:{MUTE}'>{r['professor']} 교수 · 정식 논문 {r['n_all']}편</div></div>"
         f"<div style='padding:4px 20px 0'>"
         f"<div style='display:grid;grid-template-columns:165px 1fr;gap:14px;margin-top:14px'>"
-        f"<div><div style='{title}'>탑티어 비중{_badge(_ratio(r), _ratio(other), '%p')}</div>"
+        f"<div><div style='{title}'>우수 학회·저널 비중{_badge(_ratio(r), _ratio(other), '%p')}</div>"
         f"{_ring(r, color, light)}</div>"
-        f"<div><div style='{title}'>탑티어 건수 (5년 합계){_badge(r['n_top'], other['n_top'], '편')}</div>"
+        f"<div><div style='{title}'>우수 학회·저널 건수 (5년){_badge(r['n_top'], other['n_top'], '편')}</div>"
         f"<div style='font-size:34px;font-weight:800;line-height:1;color:{color}'>{r['n_top']}"
         f"<span style='font-size:16px'>편</span></div>"
         f"<div style='height:12px;background:#f3f4f6;border-radius:999px;overflow:hidden;margin:10px 0 6px'>"
         f"<div style='height:100%;width:{width:.0f}%;background:{color};border-radius:999px'></div></div>"
         f"<div style='font-size:12px;color:{MUTE}'>연평균 {per_year_txt} · 막대는 두 연구실 같은 기준</div>"
         f"</div></div>"
-        f"<div style='margin-top:16px'><div style='{title}'>게재처 등급별 논문 수</div>{_pyramid(r, color)}</div>"
-        f"<div style='margin-top:14px'><div style='{title}'>★ 탑티어 게재처 TOP</div>{_stickers(r)}</div>"
+        f"<div style='margin-top:16px'><div style='{title}'>영향력 등급별 논문 수</div>{_pyramid(r, color)}</div>"
+        f"<div style='margin-top:14px'><div style='{title}'>★ 주요 우수 학회·저널 TOP</div>{_stickers(r)}</div>"
         f"</div></div>"
     )
 
@@ -217,7 +202,7 @@ def _yearly_chart(ra, rb):
     frames = []
     for r in (ra, rb):
         g = r["df"].groupby("year")
-        y = pd.DataFrame({"전체": g.size(), "탑티어": g["tier"].apply(lambda s: int((s == 1).sum()))})
+        y = pd.DataFrame({"전체": g.size(), "우수": g["tier"].apply(lambda s: int((s == 1).sum()))})
         y = y.reindex(range(START, END + 1), fill_value=0).reset_index(names="year")
         y["연구실"] = r["lab_name"]
         frames.append(y)
@@ -226,16 +211,16 @@ def _yearly_chart(ra, rb):
     base = alt.Chart(data).encode(
         x=alt.X("year:O", title=None, axis=alt.Axis(labelAngle=0)),
         xOffset=alt.XOffset("연구실:N", sort=labs),
-        tooltip=["연구실", alt.Tooltip("year:O", title="연도"), "탑티어", "전체"])
+        tooltip=["연구실", alt.Tooltip("year:O", title="연도"), "우수", "전체"])
     total = base.mark_bar(cornerRadiusTopLeft=4, cornerRadiusTopRight=4).encode(
         y=alt.Y("전체:Q", title="논문 수 (편)"),
         color=alt.Color("연구실:N", scale=alt.Scale(domain=labs, range=list(LIGHT)), legend=None))
     top = base.mark_bar(cornerRadiusTopLeft=4, cornerRadiusTopRight=4).encode(
-        y="탑티어:Q",
+        y="우수:Q",
         color=alt.Color("연구실:N", scale=alt.Scale(domain=labs, range=list(COLOR)),
                         legend=alt.Legend(orient="top", title=None)))
     text = base.mark_text(dy=10, fontSize=11, color="white", fontWeight="bold").encode(
-        y="탑티어:Q", text="탑티어:Q")
+        y="우수:Q", text="우수:Q")
     return alt.layer(total, top, text).resolve_scale(color="independent").properties(height=280)
 
 
@@ -243,16 +228,16 @@ def _venue_chart(ra, rb):
     rows = []
     for r, sign in ((ra, -1), (rb, 1)):
         for v, n in r["df"][r["df"]["tier"] == 1]["venue"].value_counts().items():
-            rows.append({"학회": v, "연구실": r["lab_name"], "편수": int(n), "x": sign * int(n)})
+            rows.append({"학회/저널": v, "연구실": r["lab_name"], "편수": int(n), "x": sign * int(n)})
     if not rows:
         return None
     data = pd.DataFrame(rows)
-    order = data.groupby("학회")["편수"].sum().sort_values(ascending=False).index.tolist()
+    order = data.groupby("학회/저널")["편수"].sum().sort_values(ascending=False).index.tolist()
     labs = [ra["lab_name"], rb["lab_name"]]
     mx = data["편수"].max() + 1
     base = alt.Chart(data).encode(
-        y=alt.Y("학회:N", sort=order, title=None, axis=alt.Axis(labelOverlap=False)),
-        tooltip=["학회", "연구실", "편수"])
+        y=alt.Y("학회/저널:N", sort=order, title=None, axis=alt.Axis(labelOverlap=False)),
+        tooltip=["학회/저널", "연구실", "편수"])
     bars = base.mark_bar(cornerRadius=3).encode(
         x=alt.X("x:Q", title=f"← {labs[0]}   |   {labs[1]} →", scale=alt.Scale(domain=[-mx, mx]),
                 axis=alt.Axis(labelExpr="abs(datum.value)", tickMinStep=1)),
@@ -270,7 +255,7 @@ def _paper_table(ra, rb):
     c1, c2 = st.columns([1, 2])
     who = c1.radio("연구실", [ra["lab_name"], rb["lab_name"], "둘 다"], horizontal=True,
                    key="toptier_list_lab")
-    tiers = c2.multiselect("등급", list(TIER_LABEL.values()), default=["탑티어"],
+    tiers = c2.multiselect("등급", list(TIER_LABEL.values()), default=["우수 학회·저널"],
                            key="toptier_list_tier")
     frames = [r["df"].assign(연구실=r["lab_name"]) for r in (ra, rb) if who in (r["lab_name"], "둘 다")]
     df = pd.concat(frames)
@@ -289,8 +274,14 @@ def _paper_table(ra, rb):
 def render_toptier(lab_a, lab_b):
     ra, rb = compute_toptier(lab_a), compute_toptier(lab_b)
 
-    st.subheader("1. 탑티어 논문 비중 및 건수")
-    st.caption(f"유명한 학회·저널에 논문을 자주 내는가? · {START}–{END}")
+    st.subheader("1. 우수 학회·저널 논문 비중 및 건수")
+    st.caption(f"학계에서 영향력을 인정받는 주요 학회·저널에 논문을 자주 내는가? · {START}–{END}")
+    with st.expander("ⓘ 계산 방법과 판별 기준"):
+        st.markdown(
+            "- **우수 학회·저널 비중(%)** = 우수 학회·저널 게재 논문 수 ÷ 전체 정식 논문 수 × 100\n"
+            "- **판별 기준 (전 학문 분야 공통):** OpenAlex 분야 보정 피인용 상위 10% 백분위(`>= 0.90`) 또는 저널 2년 평균 피인용 지수(`>= 5.0`) 충족 시 우수 논문으로 분류\n"
+            "- **제외 대상:** 프리프린트(arXiv 등), 워크숍·Findings, 편집자 글·정오표 등 비정식 출판물"
+        )
 
     max_top = max(ra["n_top"], rb["n_top"])
     col_a, col_b = st.columns(2, gap="medium")
@@ -299,26 +290,38 @@ def render_toptier(lab_a, lab_b):
 
     st.write("")
     if ra["has_papers"] and rb["has_papers"]:
-        t1, t2, t3 = st.tabs(["연도별 추이", "학회별 비교", "논문 목록"])
+        t1, t2, t3 = st.tabs(["연도별 추이", "학회·저널별 비교", "논문 목록"])
         with t1:
-            st.caption("진한 막대 = 탑티어 · 연한 막대 = 전체 논문")
+            st.caption("진한 막대 = 우수 학회·저널 · 연한 막대 = 전체 정식 논문")
             st.altair_chart(_yearly_chart(ra, rb), use_container_width=True)
         with t2:
             chart = _venue_chart(ra, rb)
             if chart is None:
-                st.caption("탑티어 논문이 없어요.")
+                st.caption("우수 학회·저널 논문이 없어요.")
             else:
-                st.caption("탑티어 학회별 논문 수 (왼쪽 A · 오른쪽 B)")
+                st.caption("우수 학회·저널별 논문 수 (왼쪽 A · 오른쪽 B)")
                 st.altair_chart(chart, use_container_width=True)
         with t3:
             _paper_table(ra, rb)
     else:
         st.info("논문 목록이 없어 연도별·학회별 그래프는 수집 예정이에요.")
 
-    return {"lab_a": ra, "lab_b": rb}
+    # 3줄 Visual Brief 및 최종 리포트용 요약 문장 & 격차 점수 반환
+    rat_a, rat_b = _ratio(ra) or 0.0, _ratio(rb) or 0.0
+    diff_score = round(abs(rat_a - rat_b), 1)
+    if diff_score < 5.0:
+        summary = f"두 연구실 모두 우수 학회·저널 비중이 {rat_a:.1f}% vs {rat_b:.1f}%로 연구 성과 밀도가 비슷해요."
+    else:
+        more, less = (ra, rb) if rat_a > rat_b else (rb, ra)
+        more_rat, less_rat = max(rat_a, rat_b), min(rat_a, rat_b)
+        summary = (f"{more['lab_name']}은 우수 학회·저널 비중이 {more_rat:.1f}%({more['n_top']}편)로 "
+                   f"{less['lab_name']}({less_rat:.1f}%)보다 {diff_score:.1f}%p 높아 고임팩트 성과 밀도가 높아요.")
+
+    return {"lab_a": ra, "lab_b": rb, "summary": summary, "diff_score": diff_score}
 
 
 if __name__ == "__main__":
-    st.set_page_config(page_title="탑티어 논문 비중 및 건수", layout="wide")
+    st.set_page_config(page_title="우수 학회·저널 논문 비중 및 건수", layout="wide")
     data = json.loads(MOCK_PATH.read_text(encoding="utf-8"))
-    render_toptier(data["lab_A"], data["lab_B"])
+    result = render_toptier(data["lab_A"], data["lab_B"])
+    st.caption("3줄 Brief용 요약: " + result["summary"])
