@@ -44,11 +44,39 @@ def _extract_percentile(p):
     return None
 
 
+def _clean_venue(venue: str) -> str:
+    """사전 매핑 없이 모든 학회·저널에 공통 적용되는 범용 표시명 정리"""
+    v = (venue or "").strip()
+    if not v:
+        return "(게재처 없음)"
+    # 1) "이름 - 이름" 중복 표기 제거
+    if " - " in v:
+        parts = [p.strip() for p in v.split(" - ") if p.strip()]
+        if len(parts) >= 2 and parts[0].lower() == parts[1].lower():
+            v = parts[0]
+    # 2) 끝에 공식 약어 괄호가 붙은 경우 약어 추출 (예: "... Computer Vision (ICCV)" -> "ICCV")
+    m = re.search(r"\(([A-Z0-9\-]{2,15})\)\s*$", v)
+    if m:
+        return m.group(1)
+    # 3) 전 분야 공통 영문 접두어 간소화
+    for pat, rep in [
+        (r"^Proceedings of (the )?", ""),
+        (r"^IEEE/CVF\s+", ""),
+        (r"\bInternational\b", "Int."),
+        (r"\bConference\b", "Conf."),
+        (r"\bTransactions\b", "Trans."),
+        (r"\bJournal\b", "J."),
+    ]:
+        v = re.sub(pat, rep, v, flags=re.IGNORECASE).strip()
+    return v if len(v) <= 28 else v[:26].rstrip() + "…"
+
+
 def classify_paper(p):
     """사전 등급표 없이 OpenAlex 분야 보정 백분위 및 저널 영향력 지수로 등급 판별"""
-    venue = (p.get("venue") or "").strip()
-    if not venue or _NOT_MAIN.search(venue):
-        return 3, venue or "(게재처 없음)"
+    raw_venue = (p.get("venue") or "").strip()
+    short_venue = _clean_venue(raw_venue)
+    if not raw_venue or _NOT_MAIN.search(raw_venue):
+        return 3, short_venue, raw_venue or "(게재처 없음)"
 
     pct = _extract_percentile(p)
     impact = p.get("2yr_mean_citedness")
@@ -56,14 +84,14 @@ def classify_paper(p):
     is_top_pct = pct is not None and pct >= 0.90
     is_top_imp = isinstance(impact, (int, float)) and impact >= 5.0
     if is_top_pct or is_top_imp:
-        return 1, venue
+        return 1, short_venue, raw_venue
 
     is_mid_pct = pct is not None and pct >= 0.75
     is_mid_imp = isinstance(impact, (int, float)) and impact >= 2.5
     if is_mid_pct or is_mid_imp:
-        return 2, venue
+        return 2, short_venue, raw_venue
 
-    return 3, venue
+    return 3, short_venue, raw_venue
 
 
 def compute_toptier(lab, start=START, end=END):
@@ -86,10 +114,10 @@ def compute_toptier(lab, start=START, end=END):
             continue
         if _NOT_MAIN.search(p.get("venue") or ""):
             continue
-        tier, key = classify_paper(p)
-        rows.append({"year": int(y), "title": p.get("title", ""), "venue": key,
-                     "tier": tier, "등급": TIER_LABEL[tier], "url": p.get("url")})
-    df = pd.DataFrame(rows, columns=["year", "title", "venue", "tier", "등급", "url"])
+        tier, short_key, full_venue = classify_paper(p)
+        rows.append({"year": int(y), "title": p.get("title", ""), "venue": short_key,
+                     "full_venue": full_venue, "tier": tier, "등급": TIER_LABEL[tier], "url": p.get("url")})
+    df = pd.DataFrame(rows, columns=["year", "title", "venue", "full_venue", "tier", "등급", "url"])
     count = df["tier"].value_counts()
     active = end - max(int(df["year"].min()), start) + 1 if len(df) else 0
     return {**base, "has_papers": True, "n_all": len(df), "n_top": int(count.get(1, 0)),
@@ -153,14 +181,15 @@ def _pyramid(r, color):
 def _stickers(r, top_n=6):
     if not r["has_papers"]:
         return ""
-    vc = r["df"][r["df"]["tier"] == 1]["venue"].value_counts().head(top_n)
-    if vc.empty:
+    top_df = r["df"][r["df"]["tier"] == 1]
+    if top_df.empty:
         return f"<div style='font-size:13px;color:{MUTE}'>우수 학회·저널 게재 이력 없음</div>"
-    mx = vc.max()
+    vc = top_df["venue"].value_counts().head(top_n)
+    full_map = top_df.groupby("venue")["full_venue"].first().to_dict()
     return "".join(
-        f"<span style='display:inline-flex;align-items:center;gap:6px;font-weight:700;border-radius:8px;"
+        f"<span title='{full_map.get(v, v)}' style='display:inline-flex;align-items:center;gap:6px;font-weight:700;border-radius:8px;"
         f"padding:4px 10px;margin:4px 3px;color:{TEXT};background:#fff;border:1px solid #d5d9e0;"
-        f"box-shadow:0 1px 0 {LINE};font-size:{13 + 10 * n / mx:.0f}px'>"
+        f"box-shadow:0 1px 0 {LINE};font-size:13px'>"
         f"<span style='font-size:.7em;color:#9aa3af'>★</span>{v}"
         f"<b style='background:#F0F2F6;border-radius:999px;font-size:11px;padding:1px 6px;font-weight:600'>{n}</b></span>"
         for v, n in vc.items()
