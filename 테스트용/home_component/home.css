@@ -1,7 +1,8 @@
-/* LABMATCH 첫 화면 컴포넌트 스타일 (A=#3D5A80 남색, B=#5E8C83 청록) */
+/* LABMATCH 첫 화면 컴포넌트 스타일 (라이트 A=#F24F0B 주황, B=#B9C250 올리브 / 다크 A=#9989F1 라벤더, B=#B5DC8A 연두) */
 :host, .lm {
   --bg:#FBFBFC; --surface:#FFFFFF; --ink:#1C2430; --sub:#5F6B7A; --faint:#98A2B0; --line:#E3E6EB; --soft:#F2F4F7;
-  --A:#3D5A80; --A-soft:#E8EEF5; --B:#5E8C83; --B-soft:#E7F0EE; --dot:#7D8898;
+  --A:#F24F0B; --A-soft:#FDE4D9; --B:#B9C250; --B-soft:#F1F3DC; --dot:#7D8898;
+  --tA:#E04608; --tB:#7F8724; --onA:#141414; --onB:#141414;
   --f-body:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
   --f-disp:"Space Grotesk","IBM Plex Sans KR",sans-serif;
 }
@@ -13,16 +14,16 @@
 
 .lm .top{display:flex;align-items:center;justify-content:space-between;padding:4px 0 14px;border-bottom:1px solid var(--line)}
 .lm .logo{font-family:var(--f-disp);font-weight:700;font-size:20px;letter-spacing:.06em}
-.lm .logo i{font-style:normal;color:var(--A)}
+.lm .logo i{font-style:normal;color:var(--tA)}
 .lm .ghost{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 14px;font-size:14px;color:var(--ink)}
-.lm .ghost:hover{border-color:var(--A);color:var(--A)}
+.lm .ghost:hover{border-color:var(--A);color:var(--tA)}
 
 .lm .hero{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:48px;padding:40px 0 26px;align-items:start}
 .lm h1{font-size:clamp(28px,3.4vw,40px);line-height:1.22;margin:0 0 10px;letter-spacing:-.02em;font-weight:700}
 .lm .lead{color:var(--sub);font-size:16px;margin:0 0 26px}
 .lm .searchbox{position:relative;background:var(--surface);border:1.5px solid var(--A);border-radius:16px;box-shadow:0 6px 24px -12px color-mix(in srgb,var(--A) 35%,transparent)}
 .lm .searchrow{display:flex;align-items:center;gap:10px;padding:8px 8px 8px 18px}
-.lm .searchrow svg{flex:none;color:var(--A)}
+.lm .searchrow svg{flex:none;color:var(--tA)}
 .lm .q{flex:1;min-width:0;border:0;outline:0;font:inherit;font-size:18px;padding:12px 0;background:transparent;color:var(--ink)}
 .lm .q::placeholder{color:var(--faint)}
 .lm .go{background:var(--A);color:#fff;border:0;border-radius:11px;padding:13px 22px;font-weight:600;font-size:16px}
@@ -42,7 +43,7 @@
 .lm .suggest .lbl{font-size:12.5px;font-weight:600;color:var(--faint);letter-spacing:.04em;margin-bottom:8px}
 .lm .suggest button{display:flex;gap:10px;align-items:center;width:100%;text-align:left;background:none;border:0;border-bottom:1px dashed var(--line);color:var(--ink);padding:7px 0;font-size:15px}
 .lm .suggest button span{color:var(--faint)}
-.lm .suggest button:hover{color:var(--A)}
+.lm .suggest button:hover{color:var(--tA)}
 
 .lm .arena{background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:22px 22px 18px}
 .lm .arena-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
@@ -50,20 +51,18 @@
 .lm .duel{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:10px;perspective:900px}
 .lm .vs{width:42px;height:42px;border-radius:50%;border:1px solid var(--line);display:grid;place-items:center;font-family:var(--f-disp);font-weight:700;color:var(--sub);background:var(--bg)}
 .lm .pc{position:relative;height:300px;min-width:0;border-radius:16px;padding:16px;transform-style:preserve-3d;transition:transform .25s ease;overflow:hidden;display:flex;flex-direction:column}
-.lm .pc.filled{color:#fff;box-shadow:0 16px 30px -18px rgba(28,36,48,.6)}
-.lm .pc.A.filled{background:linear-gradient(160deg,#4A6A93,#2F4867)}
-.lm .pc.B.filled{background:linear-gradient(160deg,#6E9C93,#466F67)}
+.lm .pc.filled{box-shadow:0 16px 30px -18px rgba(28,36,48,.6)}
 .lm .pc.empty{border:1.5px dashed #C9CFD8;background:var(--bg);color:var(--sub);align-items:center;justify-content:center;text-align:center}
 .lm .pc .sheen{position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle at var(--mx,50%) var(--my,30%),rgba(255,255,255,.28),transparent 45%);mix-blend-mode:soft-light}
 .lm .pc .ctop{display:flex;justify-content:space-between;align-items:center}
 .lm .pc .slot{font-family:var(--f-disp);font-size:12px;letter-spacing:.12em;opacity:.85}
 .lm .pc .rm{border:0;background:rgba(255,255,255,.16);color:#fff;border-radius:999px;font-size:12px;padding:3px 9px}
-.lm .badge{width:44px;height:44px;flex:none;border-radius:50%;background:#fff;display:grid;place-items:center;overflow:hidden;font-weight:700;font-size:14px;letter-spacing:-.02em;color:var(--A)}
+.lm .badge{width:44px;height:44px;flex:none;border-radius:50%;background:#fff;display:grid;place-items:center;overflow:hidden;font-weight:700;font-size:14px;letter-spacing:-.02em;color:var(--tA)}
 .lm .badge img{width:38px;height:38px;object-fit:contain}
 .lm .badge.sm{width:34px;height:34px;font-size:12px;box-shadow:0 0 0 1px var(--line)}
 .lm .badge.sm img{width:29px;height:29px}
 .lm .pc .badge{box-shadow:0 0 0 2px rgba(255,255,255,.25)}
-.lm .pc.B .badge.txt{color:var(--B)}
+.lm .pc.B .badge.txt{color:var(--tB)}
 .lm .pc .school{display:flex;align-items:center;gap:10px;margin:14px 0 12px;min-width:0}
 .lm .pc .sch{min-width:0;line-height:1.3}
 .lm .pc .sch b{display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -112,13 +111,13 @@
 
 .lm .strip{position:relative;height:330px;margin-top:12px;overflow:hidden;border-radius:20px;background:linear-gradient(180deg,var(--soft),var(--bg))}
 .lm .fc{position:absolute;top:28px;left:50%;width:220px;height:270px;margin-left:-110px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px;transition:transform .45s cubic-bezier(.2,.7,.2,1),opacity .45s;display:flex;flex-direction:column;box-shadow:0 14px 28px -20px rgba(28,36,48,.5)}
-.lm .fc .eyebrow{align-self:flex-start;font-size:12px;color:var(--A);background:var(--A-soft);border-radius:999px;padding:3px 10px;font-weight:600}
+.lm .fc .eyebrow{align-self:flex-start;font-size:12px;color:var(--tA);background:var(--A-soft);border-radius:999px;padding:3px 10px;font-weight:600}
 .lm .fc .pn{font-size:19px;font-weight:700;margin-top:12px}
 .lm .fc .pe{font-size:12.5px;color:var(--sub)}
 .lm .fc .pd{font-size:12.5px;color:var(--sub);margin-top:8px}
 .lm .fc .acts{margin-top:auto;display:flex;gap:6px}
 .lm .add{flex:1;border:1px solid var(--line);background:var(--surface);border-radius:9px;padding:8px 0;font-size:13px;font-weight:600}
-.lm .add.a{color:var(--A)} .lm .add.b{color:var(--B)}
+.lm .add.a{color:var(--tA)} .lm .add.b{color:var(--tB)}
 .lm .add.a:hover{background:var(--A-soft)} .lm .add.b:hover{background:var(--B-soft)}
 .lm .add.on{color:#fff}
 .lm .add.a.on{background:var(--A);border-color:var(--A)} .lm .add.b.on{background:var(--B);border-color:var(--B)}
@@ -144,10 +143,10 @@
 .lm .rk .n{font-family:var(--f-disp);color:var(--faint);font-size:13px}
 .lm .rk .nm{font-weight:600}
 .lm .rk .af{font-size:12.5px;color:var(--sub);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.lm .yon{font-size:11px;color:var(--A);border:1px solid #C7D3E3;border-radius:4px;padding:0 5px;margin-left:5px;font-weight:500}
+.lm .yon{font-size:11px;color:var(--tA);border:1px solid #F6C3AC;border-radius:4px;padding:0 5px;margin-left:5px;font-weight:500}
 .lm .mini{display:flex;gap:4px}
 .lm .mini button{width:30px;height:28px;border:1px solid var(--line);background:var(--surface);border-radius:7px;font-size:12px;font-weight:700}
-.lm .mini .a{color:var(--A)} .lm .mini .b{color:var(--B)}
+.lm .mini .a{color:var(--tA)} .lm .mini .b{color:var(--tB)}
 .lm .mini .a.on{background:var(--A);color:#fff;border-color:var(--A)} .lm .mini .b.on{background:var(--B);color:#fff;border-color:var(--B)}
 .lm .bar{height:4px;background:var(--soft);border-radius:2px;margin-top:4px;overflow:hidden}
 .lm .bar i{display:block;height:100%;background:var(--ink);opacity:.55}
@@ -160,7 +159,7 @@
 .lm .modal .msub{color:var(--sub);margin:0 0 18px;font-size:14px}
 .lm .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px}
 .lm .step{background:var(--soft);border-radius:14px;padding:12px}
-.lm .step b{font-family:var(--f-disp);font-size:13px;color:var(--A)}
+.lm .step b{font-family:var(--f-disp);font-size:13px;color:var(--tA)}
 .lm .step p{margin:4px 0 0;font-size:13.5px}
 .lm .modal table{width:100%;border-collapse:collapse;font-size:13.5px}
 .lm .modal td,.lm .modal th{text-align:left;padding:8px 6px;border-bottom:1px solid var(--soft);vertical-align:top}
@@ -187,3 +186,28 @@
   .lm .allfields{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 @media (prefers-reduced-motion:reduce){.lm *{transition:none!important;animation:none!important}}
+
+/* ---------- 다크모드: 처음부터 다크로 디자인한 것처럼 (A·B 색은 Python이 다크용 조합을 넘겨줌) ---------- */
+.lm.dark{--bg:#0C0C0F;--surface:#141418;--ink:#F3F2EE;--sub:#A5A4AD;--faint:#6E6D76;--line:#2B2B33;--soft:#1D1D23;--dot:#8E8D96;
+  --A-soft:color-mix(in srgb,var(--A) 16%,#141418);--B-soft:color-mix(in srgb,var(--B) 16%,#141418);--tA:var(--A);--tB:var(--B)}
+.lm .go,.lm .mini .a.on{color:var(--onA,#0B0B0D)}
+.lm .mini .b.on{color:var(--onB,#0B0B0D)}
+.lm .pc.A.filled{background:var(--A);color:var(--onA,#0B0B0D)}
+.lm .pc.B.filled{background:var(--B);color:var(--onB,#0B0B0D)}
+.lm .pc.filled .rm{background:color-mix(in srgb,currentColor 14%,transparent);color:inherit}
+.lm .pc.filled .tag{background:color-mix(in srgb,currentColor 10%,transparent);border-color:color-mix(in srgb,currentColor 25%,transparent)}
+.lm .pc.filled .stats{border-top-color:color-mix(in srgb,currentColor 22%,transparent)}
+.lm .pc .badge{box-shadow:0 0 0 2px color-mix(in srgb,currentColor 20%,transparent)}
+.lm.dark .pc.empty{border-color:#3A3A42}
+.lm.dark .pc.empty .qm{color:#4A4A53}
+.lm.dark .cta.ready{background:var(--ink);color:#0C0C0F}
+.lm.dark .cta-hint.warn{color:#FF9B85}
+.lm.dark .chip.on,.lm.dark .allfields button.on{background:var(--ink);border-color:var(--ink);color:#0C0C0F}
+.lm.dark .chip.on em{color:#55545C}
+.lm .add.a.on{color:var(--onA)}.lm .add.b.on{color:var(--onB)}
+.lm.dark .dots i{background:#3A3A42}
+.lm.dark .yon{border-color:color-mix(in srgb,var(--A) 45%,transparent)}
+.lm.dark .strip{background:linear-gradient(180deg,#141418,#0C0C0F)}
+.lm.dark .fc,.lm.dark .tip,.lm.dark .drop,.lm.dark .modal{box-shadow:0 18px 40px -20px rgba(0,0,0,.8)}
+.lm.dark .scrim{background:rgba(0,0,0,.6)}
+.lm.dark .searchbox{box-shadow:0 6px 30px -12px color-mix(in srgb,var(--A) 45%,transparent)}

@@ -61,6 +61,14 @@ def yonsei_list(db_tree):
 
 def render_home(db_tree, slots, search, notice=None):
     """첫 화면을 그리고, 사용자가 방금 한 행동(event)을 돌려줍니다. 없으면 None."""
+    from compare_sheets import P, use_palette
+    try:
+        dark = st.context.theme.type == "dark"
+    except Exception:
+        dark = False
+    use_palette(dark)
+    if dark:
+        st.html('<style>.stApp,[data-testid="stHeader"]{background:#0C0C0F}</style>')
     comp = _home_component()
     result = comp(
         data={
@@ -70,6 +78,8 @@ def render_home(db_tree, slots, search, notice=None):
             "search": search,
             "notice": notice,
             "logos": load_logos(),
+            "theme": "dark" if dark else "light",
+            "colors": {"A": P["A"], "B": P["B"], "tA": P["TA"], "tB": P["TB"], "onA": P["ON_A"], "onB": P["ON_B"]},
         },
         key="labmatch_home",
         on_event_change=lambda: None,

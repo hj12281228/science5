@@ -16,10 +16,59 @@ from practice3 import summarize as summarize_fields
 from practice4 import compute_lab_size
 from practice5 import compute_continuity
 
-A, B = "#3D5A80", "#5E8C83"
+A, B = "#F24F0B", "#B9C250"
 INK, MU, HA = "#141414", "#8A877F", "#9A968D"
 YEARS = list(range(2021, 2026))
 esc = html.escape
+
+# ---------------------------------------------------------------- 색 (라이트 / 다크)
+# 라이트: 주황 #F24F0B · 올리브 #B9C250 / 다크: 라벤더 #9989F1 · 연두 #B5DC8A (확정)
+# TA·TB는 글씨용 색. 올리브는 흰 바탕 글씨로 쓰기엔 옅어서 조금 진하게 씀.
+LIGHT = dict(A="#F24F0B", B="#B9C250", TA="#E04608", TB="#7F8724", INK="#141414", MU="#8A877F", HA="#9A968D",
+             ON_A="#141414", ON_B="#141414",
+             AT="#FDE4D9", BT="#F1F3DC", SAND="#EAE7E0", GRID="#D3CFC5", PAPER="#FFFFFF", ON_BLK="#FFFFFF",
+             BUB_A="#F79A72", BUB_C="#B5B1A8", BUB_B="#D3D88F", BUB_TXT="#141414")
+DARK = dict(INK="#F3F2EE", MU="#8E8D96", HA="#6B6A73", SAND="#1D1D23", GRID="#34343C", PAPER="#141418", ON_BLK="#F3F2EE",
+            BUB_C="#8E8D96", BUB_TXT="#0B0B0D",
+            A="#9989F1", B="#B5DC8A", TA="#9989F1", TB="#B5DC8A", ON_A="#0B0B0D", ON_B="#0B0B0D")
+P = dict(LIGHT)
+DARK_MODE = False
+
+
+def blend(c1, c2, w):
+    """c1을 w만큼, c2를 1-w만큼 섞은 색"""
+    a = [int(c1[i:i + 2], 16) for i in (1, 3, 5)]
+    b = [int(c2[i:i + 2], 16) for i in (1, 3, 5)]
+    return "#" + "".join(f"{round(x * w + y * (1 - w)):02X}" for x, y in zip(a, b))
+
+
+def rgba(c, a):
+    return f"rgba({int(c[1:3], 16)},{int(c[3:5], 16)},{int(c[5:7], 16)},{a})"
+
+
+def use_palette(dark=False, pal=None):
+    """화면 테마에 맞춰 색을 고름 (그래프 SVG 색도 함께 바뀜)"""
+    global A, B, INK, MU, HA, DARK_MODE
+    P.clear()
+    P.update(LIGHT)
+    if dark:
+        P.update(DARK)
+        P["AT"], P["BT"] = blend(P["A"], "#141418", .2), blend(P["B"], "#141418", .2)
+        P["BUB_A"], P["BUB_B"] = P["A"], P["B"]
+    A, B, INK, MU, HA = P["A"], P["B"], P["INK"], P["MU"], P["HA"]
+    DARK_MODE = dark
+
+
+def css_vars():
+    """CSS 변수 (.lm 안에서 씀)"""
+    p = P
+    blk = "#1E1E25" if DARK_MODE else "#141414"
+    page = "#0C0C0F" if DARK_MODE else "#FFFFFF"
+    return (f"<style>.lm{{--paper:{p['PAPER'] if DARK_MODE else '#FBFAF7'};--ink:{p['INK']};--mute:{p['MU']};--line:{'#2B2B33' if DARK_MODE else '#DCD8CF'};"
+            f"--A:{p['A']};--B:{p['B']};--At:{p['AT']};--Bt:{p['BT']};--sand:{p['SAND']};--onA:{p['ON_A']};--onB:{p['ON_B']};"
+            f"--blk:{blk};--page:{page};--hatch:{p['HA']};--tA:{p['TA']};--tB:{p['TB']};--tinA:{p['TA'] if not DARK_MODE else blend(p['A'], '#FFFFFF', .85)};"
+            f"--tinB:{p['TB'] if not DARK_MODE else blend(p['B'], '#FFFFFF', .85)};"
+            f"--lbA:{p['A']};--lbB:{p['B']}}}</style>")
 
 # OpenAlex 최상위 분야(concepts level 0) 한글 이름
 FIELD_KO = {
@@ -41,7 +90,7 @@ QUESTIONS = [
 CSS = """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
-.lm{--paper:#FBFAF7;--ink:#141414;--mute:#8A877F;--line:#DCD8CF;--A:#3D5A80;--B:#5E8C83;--At:#DDE3EC;--Bt:#DCE7E4;--sand:#EAE7E0;
+.lm{--paper:#FBFAF7;--ink:#141414;--mute:#8A877F;--line:#DCD8CF;--A:#F24F0B;--B:#B9C250;--tA:#E04608;--tB:#7F8724;--At:#FDE4D9;--Bt:#F1F3DC;--sand:#EAE7E0;
  --disp:"Space Grotesk","IBM Plex Sans KR",sans-serif;--kr:"IBM Plex Sans KR","Apple SD Gothic Neo",sans-serif;--mono:"IBM Plex Mono",ui-monospace,monospace;
  font-family:var(--kr);color:var(--ink);line-height:1.35}
 .lm *{box-sizing:border-box}
@@ -55,19 +104,19 @@ CSS = """
 /* 이름 */
 .lm-names{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:end;gap:24px;margin:12px 0 26px}
 .lm-nm{font-weight:700;font-size:clamp(40px,6.4vw,92px);line-height:.98;letter-spacing:-.04em;min-width:0;overflow-wrap:anywhere;word-break:keep-all}
-.lm-nm.A{color:var(--A)}.lm-nm.B{color:var(--B);text-align:right}
+.lm-nm.A{color:var(--tA)}.lm-nm.B{color:var(--tB);text-align:right}
 .lm-nm small{display:flex;align-items:center;gap:10px;font-size:15px;font-weight:500;letter-spacing:0;color:var(--ink);margin-bottom:12px;min-width:0}
 .lm-nm small span.t{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lm-nm.B small{justify-content:flex-end}
 .lm-nm .eng{display:block;font-size:15px;font-weight:400;letter-spacing:0;color:var(--mute);margin-top:6px}
-.lm-logo{width:34px;height:34px;flex:none;border-radius:50%;background:#fff;display:grid;place-items:center;overflow:hidden;border:1px solid var(--line);font-size:12px;font-weight:700;color:var(--A)}
+.lm-logo{width:34px;height:34px;flex:none;border-radius:50%;background:#fff;display:grid;place-items:center;overflow:hidden;border:1px solid var(--line);font-size:12px;font-weight:700;color:var(--tA)}
 .lm-logo img{width:29px;height:29px;object-fit:contain}
 .lm-vs{font-family:var(--disp);font-weight:300;font-size:40px;color:var(--mute);padding-bottom:10px}
 /* 요약 벤토 */
 .lm-bento{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px}
 .lm-tile{border-radius:22px;background:var(--paper);padding:18px 20px 20px;min-height:240px;display:flex;flex-direction:column;border:1px solid var(--line);min-width:0}
-.lm-tile.fillA{background:var(--A);color:#fff;border-color:var(--A)}.lm-tile.fillB{background:var(--B);color:#fff;border-color:var(--B)}
-.lm-tile.fillA .tag,.lm-tile.fillB .tag{color:rgba(255,255,255,.7)}
+.lm-tile.fillA{background:var(--A);color:var(--onA);border-color:var(--A)}.lm-tile.fillB{background:var(--B);color:var(--onB);border-color:var(--B)}
+.lm-tile.fillA .tag,.lm-tile.fillB .tag{color:inherit;opacity:.7}
 .lm-tile h4{margin:8px 0 0;font-size:15px;font-weight:600;padding:0}
 .lm-big{font-family:var(--disp);line-height:.92;letter-spacing:-.04em;margin-top:auto;padding-top:18px}
 .lm-big .r{display:flex;align-items:baseline;gap:8px}
@@ -79,7 +128,7 @@ CSS = """
 .lm-bars{margin-top:14px;display:grid;gap:6px}
 .lm-bars span{display:block;height:2px;background:var(--line);position:relative}
 .lm-bars span b{position:absolute;left:0;top:-1px;height:4px;border-radius:2px}
-.lm-tile.fillA .lm-bars span,.lm-tile.fillB .lm-bars span{background:rgba(255,255,255,.25)}
+.lm-tile.fillA .lm-bars span,.lm-tile.fillB .lm-bars span{background:color-mix(in srgb,currentColor 25%,transparent)}
 /* 3줄 브리프 */
 .lm-brief{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;margin-top:28px;border-top:1px solid var(--ink)}
 .lm-brief ol{list-style:none;margin:0;padding:0}
@@ -95,17 +144,17 @@ CSS = """
 .lm-hd{display:grid;grid-template-columns:44px minmax(0,1fr) auto;align-items:center;gap:8px;margin-bottom:28px}
 .lm-hd .no{font-family:var(--mono);font-size:13px;color:var(--mute)}
 .lm-hd .q{font-size:clamp(26px,2.8vw,40px);font-weight:700;letter-spacing:-.03em;line-height:1.15}
-.lm-hd .star{font-size:12px;font-weight:600;color:#fff;background:var(--ink);border-radius:999px;padding:3px 10px;white-space:nowrap}
+.lm-hd .star{font-size:12px;font-weight:600;color:var(--paper);background:var(--ink);border-radius:999px;padding:3px 10px;white-space:nowrap}
 .lm-g{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:16px}
 .lm-t{border-radius:22px;padding:24px 26px;position:relative;overflow:hidden;min-width:0}
 .s3{grid-column:span 3}.s4{grid-column:span 4}.s5{grid-column:span 5}.s6{grid-column:span 6}.s7{grid-column:span 7}.s8{grid-column:span 8}.s12{grid-column:span 12}
-.solA{background:var(--A);color:#fff}.solA .tag{color:rgba(255,255,255,.65)}
-.solB{background:var(--B);color:#fff}.solB .tag{color:rgba(255,255,255,.7)}
-.tinA{background:var(--At);color:var(--A)}.tinA .tag{color:var(--A);opacity:.75}
-.tinB{background:var(--Bt);color:var(--B)}.tinB .tag{color:var(--B);opacity:.75}
+.solA{background:var(--A);color:var(--onA)}.solA .tag{color:inherit;opacity:.68}
+.solB{background:var(--B);color:var(--onB)}.solB .tag{color:inherit;opacity:.7}
+.tinA{background:var(--At);color:var(--tinA)}.tinA .tag{color:var(--tinA);opacity:.75}
+.tinB{background:var(--Bt);color:var(--tinB)}.tinB .tag{color:var(--tinB);opacity:.75}
 .out{background:var(--paper);border:1px solid var(--ink)}
 .sand{background:var(--sand)}
-.blk{background:var(--ink);color:#fff}.blk .tag{color:rgba(255,255,255,.55)}
+.blk{background:var(--blk);color:#F3F2EE;border:1px solid var(--line)}.blk .tag{color:rgba(243,242,238,.55)}
 .h300{min-height:320px}.h280{min-height:280px}
 .lm-ring{position:absolute;right:26px;top:24px}
 .lm-huge{font-family:var(--disp);letter-spacing:-.05em;line-height:.85;font-size:clamp(64px,7.6vw,112px)}
@@ -124,10 +173,10 @@ CSS = """
 .lm-vl li b{font-family:var(--disp);font-size:clamp(17px,1.6vw,23px);text-align:right}
 .lm-vl.wide li{grid-template-columns:minmax(0,1fr) 80px 80px}
 .lm-vl li:nth-child(2){opacity:.78}.lm-vl li:nth-child(3){opacity:.55}.lm-vl li:nth-child(n+4){opacity:.32}
-.lbA{color:#9FB4D1}.lbB{color:#A9CBC3}
+.lbA{color:var(--lbA)}.lbB{color:var(--lbB)}
 .lm-legend{display:flex;gap:14px;font-size:12px;align-items:center;flex-wrap:wrap}
 .lm-legend i{display:inline-block;width:12px;height:12px;border-radius:4px;vertical-align:-1px;margin-right:5px}
-.lm-hatch{background:repeating-linear-gradient(135deg,transparent 0 4px,#9A968D 4px 5px);border:1px solid #9A968D}
+.lm-hatch{background:repeating-linear-gradient(135deg,transparent 0 4px,var(--hatch,#9A968D) 4px 5px);border:1px solid var(--hatch,#9A968D)}
 .lm-chip{display:inline-block;font-size:11px;border-radius:999px;padding:2px 9px;border:1px solid currentColor}
 .lm-empty{font-size:13px;opacity:.7;margin-top:14px}
 .lm-split{display:flex;align-items:center;gap:12px;margin-bottom:20px}
@@ -145,7 +194,44 @@ CSS = """
 .lm-sig i.on{opacity:1}
 .lm-inline{display:flex;align-items:flex-end;gap:18px;margin-top:28px;flex-wrap:wrap}
 .lm-inline .lm-sub{margin:0 0 8px}
-svg text{font-family:"IBM Plex Sans KR",sans-serif}
+.lm svg text{font-family:"IBM Plex Sans KR",sans-serif}
+.lm svg text:not([fill]){fill:var(--ink)}
+/* 인덱스 폴더: 지표 5장을 겹쳐 두고, 누르면 열림 (한 번에 한 장) */
+:root{interpolate-size:allow-keywords}
+.lm-folders{position:relative;padding-top:44px;perspective:1800px}
+.lm-fold{position:relative;border:1px solid var(--line);border-radius:0 26px 26px 26px;margin-top:-2px;
+ box-shadow:0 -14px 30px -22px rgba(0,0,0,.45);transform-origin:50% 0;transform-style:preserve-3d;
+ transition:transform .7s cubic-bezier(.16,1,.3,1),box-shadow .7s cubic-bezier(.16,1,.3,1),background-color .4s}
+.lm-fold:first-child{margin-top:0}
+.lm-fold:not([open]){transform:rotateX(12deg)}
+.lm-fold:not([open]):hover{transform:rotateX(0deg) translateY(-10px);box-shadow:0 -18px 34px -18px rgba(0,0,0,.5)}
+.lm-fold[open]{transform:none;background:var(--paper)!important}
+.lm-fold > summary{background:inherit;border-radius:inherit;list-style:none;cursor:pointer;display:grid;grid-template-columns:44px minmax(0,1fr) auto 40px;align-items:center;gap:12px;padding:22px 36px 44px;position:relative}
+.lm-fold > summary::-webkit-details-marker{display:none}
+.lm-fold > summary:focus-visible{outline:2px solid var(--A);outline-offset:-4px;border-radius:20px}
+.lm-ftab{position:absolute;top:-35px;left:calc(var(--i) * 168px - 1px);height:36px;min-width:150px;padding:0 18px;border:1px solid var(--line);border-bottom:0;
+ border-radius:14px 14px 0 0;background:inherit;display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:11px;letter-spacing:.06em;color:var(--mute)}
+.lm-ftab b{font-family:var(--kr);font-size:13px;letter-spacing:0;color:var(--ink);font-weight:600}
+.lm-fold > summary .no{font-family:var(--mono);font-size:13px;color:var(--mute)}
+.lm-fold > summary .q{font-size:clamp(22px,2.4vw,34px);font-weight:700;letter-spacing:-.03em;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lm-fold[open] > summary .q{font-size:clamp(26px,2.8vw,40px);white-space:normal}
+.lm-fold > summary .ab{display:flex;gap:16px;align-items:baseline;font-family:var(--disp);font-size:24px;white-space:nowrap}
+.lm-fold > summary .ab b{font-weight:700}.lm-fold > summary .ab s{text-decoration:none;font-weight:300;opacity:.5}
+.lm-fold > summary .chev{font-family:var(--disp);font-weight:300;font-size:34px;line-height:1;text-align:right;transition:transform .6s cubic-bezier(.16,1,.3,1)}
+.lm-fold[open] > summary .chev{transform:rotate(180deg)}
+.lm-fold[open] > summary .ab{opacity:0;pointer-events:none}
+.lm-fold::details-content{block-size:0;overflow:clip;transition:block-size .7s cubic-bezier(.16,1,.3,1),content-visibility .7s allow-discrete}
+.lm-fold[open]::details-content{block-size:auto}
+.lm-fbody{padding:0 36px 58px;animation:lmRise .7s cubic-bezier(.16,1,.3,1)}
+@keyframes lmRise{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+.lm-slidefoot{display:flex;justify-content:space-between;gap:12px;font-family:var(--mono);font-size:11px;letter-spacing:.06em;color:var(--mute);border-top:1px solid var(--line);margin-top:26px;padding-top:12px}
+.lm-slidefoot span:nth-child(2){flex:1;text-align:center}
+.lm-hint2{font-size:13px;color:var(--mute);margin:0 0 6px}
+@media (prefers-reduced-motion:reduce){.lm-fold,.lm-fold::details-content,.lm-fbody,.lm-fold > summary .chev{transition:none;animation:none}}
+@media (max-width:1100px){.lm-ftab{left:calc(var(--i) * 112px - 1px);min-width:104px;padding:0 12px}.lm-ftab b{display:none}.lm-fold > summary{padding:22px 22px 30px}.lm-fbody{padding:0 22px 30px}}
+@media (max-width:700px){.lm-ftab{left:calc(var(--i) * 64px - 1px);min-width:58px;padding:0 10px;top:-29px;height:30px}
+ .lm-fold > summary{grid-template-columns:28px minmax(0,1fr) 28px;padding:18px 14px 42px}.lm-fold > summary .ab{grid-column:2;font-size:18px}
+ .lm-fold[open] > summary .ab{display:none}.lm-fbody{padding:0 12px 24px}.lm-slidefoot span:nth-child(2){display:none}}
 @media (max-width:1100px){
  .lm-bento{grid-template-columns:repeat(2,minmax(0,1fr))}
  .s3,.s4,.s5{grid-column:span 6}.s7,.s8{grid-column:span 12}
@@ -288,14 +374,16 @@ def names_html(pa, pb, logo_a, logo_b):
     return f'<div class="lm"><div class="lm-names">{side(pa, logo_a, "A")}<div class="lm-vs">vs</div>{side(pb, logo_b, "B")}</div></div>'
 
 
-def summary_html(m, chosen, demo=False):
+def summary_html(m, chosen, demo=False, title=""):
     tiles = []
     for q in QUESTIONS:
         a, b, unit, mx = headline(m, q["key"])
         w = lead_of(a, b, unit)
         fill = f"fill{w}" if (q["key"] in chosen and w) else ""
-        ca, cb = ("#fff", "#fff") if fill else ("var(--A)", "var(--B)")
-        fa, fb = ("rgba(255,255,255,.95)", "rgba(255,255,255,.6)") if fill else ("var(--A)", "var(--B)")
+        ca = cb = ("var(--onA)" if w == "A" else "var(--onB)") if fill else None
+        if not fill:
+            ca, cb = "var(--tinA)", "var(--tinB)"
+        fa, fb = (ca, ca) if fill else ("var(--A)", "var(--B)")
         cls = (lambda me: "even" if w is None else ("lead" if w == me else "lag"))
         tiles.append(
             f'<div class="lm-tile {fill}"><div class="tag"><span>{q["no"]}</span><span>{q["en"]}</span></div><h4>{esc(q["chip"])}</h4>'
@@ -310,16 +398,14 @@ def summary_html(m, chosen, demo=False):
     note = '<div style="margin-bottom:12px"><span class="note">화면 확인용 예시 데이터예요. 실제 교수님 데이터가 아닙니다.</span></div>' if demo else ""
     return (f'<div class="lm">{note}<div class="lm-bento">{"".join(tiles)}</div>'
             f'<div class="lm-brief"><ol>{"".join(rows)}</ol><div class="lm-arrow">↓</div></div>'
-            f'<div class="lm-hint">최근 5년(2021~2025) 논문 기준 · 자세한 그래프는 <b>지표</b> 탭에서 볼 수 있어요.</div></div>')
+            f'<div class="lm-hint">최근 5년(2021~2025) 논문 기준 · 자세한 그래프는 <b>지표</b> 탭에서 볼 수 있어요.</div>'
+            f'<div class="lm-slidefoot"><span>LABMATCH</span><span>{esc(title)}</span><span>SUMMARY</span></div></div>')
 
 
 # ================================================================ 지표 장 공통
-_HATCH = (f'<pattern id="{{id}}" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">'
-          f'<line x1="0" y1="0" x2="0" y2="6" stroke="{HA}" stroke-width="1"/></pattern>')
-
-
 def _hatch(pid):
-    return _HATCH.replace("{id}", pid)
+    return (f'<pattern id="{pid}" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">'
+            f'<line x1="0" y1="0" x2="0" y2="6" stroke="{HA}" stroke-width="1"/></pattern>')
 
 
 def _tiles_class(w):
@@ -358,8 +444,8 @@ def sheet_top(m):
 
     def big(r, cls, wt, slot, other):
         dark = _on_dark(cls)
-        col = "#fff" if dark else (A if slot == "A" else B)
-        track = "rgba(255,255,255,.16)" if dark else ("rgba(61,90,128,.18)" if slot == "A" else "rgba(94,140,131,.18)")
+        col = P["ON_" + slot] if dark else P["T" + slot]
+        track = rgba(col, .2)
         sub = f'{r["n_top"]} / {r["n_all"]}편'
         if r["ratio"] > other["ratio"] and w:
             sub += f' · {"B" if slot == "A" else "A"}보다 +{r["ratio"] - other["ratio"]:.1f}%p'
@@ -376,16 +462,16 @@ def sheet_top(m):
             return f'<text x="{x}" y="{y}" text-anchor="{anchor}" font-family="Space Grotesk" font-size="{size}" font-weight="{wt}" fill="{col}">{n}</text>'
         pyr = (f'<svg width="100%" viewBox="0 0 400 250" style="margin-top:14px">'
                f'<polygon points="200,10 200,80 130,80 165,10" fill="{A}"/><polygon points="200,10 200,80 270,80 235,10" fill="{B}"/>'
-               f'<polygon points="200,90 200,160 92,160 127,90" fill="#DDE3EC"/><polygon points="200,90 200,160 308,160 273,90" fill="#DCE7E4"/>'
-               f'<polygon points="200,170 200,240 54,240 89,170" fill="#EAE7E0"/><polygon points="200,170 200,240 346,240 311,170" fill="#EAE7E0"/>'
+               f'<polygon points="200,90 200,160 92,160 127,90" fill="{P['AT']}"/><polygon points="200,90 200,160 308,160 273,90" fill="{P['BT']}"/>'
+               f'<polygon points="200,170 200,240 54,240 89,170" fill="{P['SAND']}"/><polygon points="200,170 200,240 346,240 311,170" fill="{P['SAND']}"/>'
                f'<line x1="200" y1="0" x2="200" y2="250" stroke="{INK}"/>'
-               + num(14, 54, a["n_top"], "start", A, 32, 700 if a["n_top"] >= b["n_top"] else 300)
-               + num(386, 54, b["n_top"], "end", B, 32, 700 if b["n_top"] >= a["n_top"] else 300)
+               + num(14, 54, a["n_top"], "start", P["TA"], 32, 700 if a["n_top"] >= b["n_top"] else 300)
+               + num(386, 54, b["n_top"], "end", P["TB"], 32, 700 if b["n_top"] >= a["n_top"] else 300)
                + num(14, 134, a["n_mid"], "start", MU, 22, 400) + num(386, 134, b["n_mid"], "end", MU, 22, 400)
                + num(14, 214, a["n_oth"], "start", MU, 22, 400) + num(386, 214, b["n_oth"], "end", MU, 22, 400)
-               + f'<rect x="166" y="52" width="68" height="20" rx="10" fill="{INK}"/><text x="200" y="66" text-anchor="middle" fill="#fff" font-weight="700" font-size="12">★ 우수</text>'
-               f'<rect x="172" y="116" width="56" height="20" rx="10" fill="#fff" stroke="{INK}"/><text x="200" y="130" text-anchor="middle" font-size="12">중위권</text>'
-               f'<rect x="178" y="196" width="44" height="20" rx="10" fill="#fff" stroke="{INK}"/><text x="200" y="210" text-anchor="middle" font-size="12">기타</text></svg>')
+               + f'<rect x="166" y="52" width="68" height="20" rx="10" fill="{INK}"/><text x="200" y="66" text-anchor="middle" fill="{P['PAPER']}" font-weight="700" font-size="12">★ 우수</text>'
+               f'<rect x="172" y="116" width="56" height="20" rx="10" fill="{P['PAPER']}" stroke="{INK}"/><text x="200" y="130" text-anchor="middle" font-size="12" fill="{INK}">중위권</text>'
+               f'<rect x="178" y="196" width="44" height="20" rx="10" fill="{P['PAPER']}" stroke="{INK}"/><text x="200" y="210" text-anchor="middle" font-size="12" fill="{INK}">기타</text></svg>')
 
     # 연도별: 빗금 = 전체 정식 논문, 채움 = 우수
     if a["yearly"] and b["yearly"]:
@@ -401,7 +487,7 @@ def sheet_top(m):
                     s += f'<rect x="{x}" y="{base - ha:.1f}" width="{bw}" height="{ha:.1f}" rx="16" fill="url(#h1)" stroke="{HA}"/>'
                 if tp:
                     s += (f'<rect x="{x + 4}" y="{base - ht:.1f}" width="{bw - 8}" height="{max(ht - 4, 10):.1f}" rx="12" fill="{c}"/>'
-                          f'<text x="{x + bw / 2}" y="{base - ht - 8:.1f}" text-anchor="middle" font-family="Space Grotesk" font-size="15" font-weight="700" fill="{c}">{tp}</text>')
+                          f'<text x="{x + bw / 2}" y="{base - ht - 8:.1f}" text-anchor="middle" font-family="Space Grotesk" font-size="15" font-weight="700" fill="{P["T" + ("A" if k == 0 else "B")]}">{tp}</text>')
                 if not al:
                     s += f'<text x="{x + bw / 2}" y="{base - 6}" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="{MU}">0</text>'
             s += f'<text x="{x0 + bw + gap / 2}" y="{base + 24}" text-anchor="middle" font-family="IBM Plex Mono" font-size="13">{y}</text>'
@@ -433,8 +519,8 @@ def sheet_ind(m):
 
     def big(r, cls, wt, slot):
         dark = _on_dark(cls)
-        col = "#fff" if dark else (A if slot == "A" else B)
-        track = "rgba(255,255,255,.2)" if dark else ("rgba(61,90,128,.2)" if slot == "A" else "rgba(94,140,131,.2)")
+        col = P["ON_" + slot] if dark else P["T" + slot]
+        track = rgba(col, .2)
         return (f'<div class="lm-t s4 {cls} h300"><div class="tag"><span>LAB {slot} · 외부 기관 협업</span></div>'
                 f'<div class="lm-huge {wt} lm-mt">{r["external_ratio"]:.1f}<u>%</u></div>'
                 f'<div class="lm-sub">{r["external"]} / {r["total"]}편 · 같은 대학 공저자 제외</div>'
@@ -445,8 +531,8 @@ def sheet_ind(m):
         v = [r["split"]["기업 협업"], r["split"]["기타 외부 기관"], r["split"]["내부 연구"]]
         lab = lambda x: f"{x:.0f}%" if x >= 12 else ""
         return (f'<div class="lm-split"><b style="color:{c}">{slot}</b><div class="bar">'
-                f'<div style="width:{v[0]}%;background:{INK};color:#fff;padding-left:12px;font-weight:700">{lab(v[0])}</div>'
-                f'<div style="width:{v[1]}%;background:{HA};color:#fff;padding-left:10px">{lab(v[1])}</div>'
+                f'<div style="width:{v[0]}%;background:{INK};color:{P['PAPER']};padding-left:12px;font-weight:700">{lab(v[0])}</div>'
+                f'<div style="width:{v[1]}%;background:{HA};color:{P['PAPER'] if not DARK_MODE else INK};padding-left:10px">{lab(v[1])}</div>'
                 f'<div class="lm-hatch" style="width:{v[2]}%;border:0;justify-content:flex-end;padding-right:14px">{lab(v[2])}</div></div></div>')
 
     # 연도별 기업 공저 비율 꺾은선
@@ -456,7 +542,7 @@ def sheet_ind(m):
         top_v = math.ceil(top_v / 20) * 20
         x = lambda i: 50 + i * 150
         y = lambda v: 180 - v / top_v * 160
-        s = "".join(f'<line x1="40" x2="680" y1="{y(v):.1f}" y2="{y(v):.1f}" stroke="#D3CFC5" stroke-dasharray="2 4"/>'
+        s = "".join(f'<line x1="40" x2="680" y1="{y(v):.1f}" y2="{y(v):.1f}" stroke="{P['GRID']}" stroke-dasharray="2 4"/>'
                     f'<text x="0" y="{y(v) + 4:.1f}" font-family="IBM Plex Mono" font-size="11" fill="{MU}">{v}%</text>'
                     for v in range(20, top_v + 1, 20))
         s += f'<line x1="40" x2="680" y1="180" y2="180" stroke="{INK}"/>'
@@ -465,9 +551,9 @@ def sheet_ind(m):
             if not pts:
                 continue
             s += f'<polyline points="{" ".join(f"{x(i)},{y(v):.1f}" for i, v in pts)}" fill="none" stroke="{c}" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>'
-            s += "".join(f'<circle cx="{x(i)}" cy="{y(v):.1f}" r="6" fill="{c if j == len(pts) - 1 else "#EAE7E0"}" stroke="{c}" stroke-width="3"/>' for j, (i, v) in enumerate(pts))
+            s += "".join(f'<circle cx="{x(i)}" cy="{y(v):.1f}" r="6" fill="{c if j == len(pts) - 1 else P['SAND']}" stroke="{c}" stroke-width="3"/>' for j, (i, v) in enumerate(pts))
             li, lv = pts[-1]
-            s += f'<text x="{x(li) + 14}" y="{y(lv) + 8:.1f}" font-family="Space Grotesk" font-size="24" font-weight="{wt}" fill="{c}">{lv:.0f}%</text>'
+            s += f'<text x="{x(li) + 14}" y="{y(lv) + 8:.1f}" font-family="Space Grotesk" font-size="24" font-weight="{wt}" fill="{P["TA"] if r is a else P["TB"]}">{lv:.0f}%</text>'
         s += "".join(f'<text x="{x(i)}" y="204" text-anchor="middle" font-family="IBM Plex Mono" font-size="12">{yy}</text>' for i, yy in enumerate(YEARS))
         trend = f'<svg width="100%" viewBox="0 0 760 220" style="margin-top:12px">{s}</svg>'
     else:
@@ -477,9 +563,9 @@ def sheet_ind(m):
     pa = {p["name"]: p.get("count", 0) for p in a["partners"]}
     pb = {p["name"]: p.get("count", 0) for p in b["partners"]}
     if pa or pb:
-        cols = [("A만", 80, "#7D98BD", [(n, pa[n]) for n in pa if n not in pb]),
-                ("공통", 240, "#B5B1A8", [(n, pa[n] + pb[n]) for n in pa if n in pb]),
-                ("B만", 400, "#86B0A7", [(n, pb[n]) for n in pb if n not in pa])]
+        cols = [("A만", 80, P["BUB_A"], [(n, pa[n]) for n in pa if n not in pb]),
+                ("공통", 240, P["BUB_C"], [(n, pa[n] + pb[n]) for n in pa if n in pb]),
+                ("B만", 400, P["BUB_B"], [(n, pb[n]) for n in pb if n not in pa])]
         s = ""
         for title, cx, c, items in cols:
             s += f'<text x="{cx}" y="16" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="rgba(255,255,255,.55)">{title}</text>'
@@ -489,7 +575,7 @@ def sheet_ind(m):
                 yy += rr
                 short = n if len(n) <= 14 else n[:13] + "…"
                 s += (f'<circle cx="{cx}" cy="{yy:.1f}" r="{rr:.1f}" fill="{c}"/>'
-                      f'<text x="{cx}" y="{yy + 6:.1f}" text-anchor="middle" font-family="Space Grotesk" font-weight="700" font-size="16" fill="{INK}">{v}</text>'
+                      f'<text x="{cx}" y="{yy + 6:.1f}" text-anchor="middle" font-family="Space Grotesk" font-weight="700" font-size="16" fill="{P['BUB_TXT']}">{v}</text>'
                       f'<text x="{cx}" y="{yy + rr + 14:.1f}" text-anchor="middle" font-size="11" fill="rgba(255,255,255,.78)">{esc(short)}</text>')
                 yy += rr + 20
             if not items:
@@ -500,7 +586,7 @@ def sheet_ind(m):
         bub = '<div class="lm-empty" style="color:rgba(255,255,255,.6)">함께 쓴 기업이 없어요.</div>'
 
     return (big(a, ta, wa, "A") + big(b, tb, wb, "B")
-            + f'<div class="lm-t s4 out h300"><div class="tag"><span>논문 구성</span><span>100%</span></div><div style="margin-top:26px">{split("A", a, A)}{split("B", b, B)}</div>'
+            + f'<div class="lm-t s4 out h300"><div class="tag"><span>논문 구성</span><span>100%</span></div><div style="margin-top:26px">{split("A", a, P["TA"])}{split("B", b, P["TB"])}</div>'
               f'<div class="lm-legend" style="margin-top:6px;color:{MU}"><span><i style="background:{INK}"></i>기업</span><span><i style="background:{HA}"></i>기타 외부</span><span><i class="lm-hatch"></i>내부</span></div></div>'
             + f'<div class="lm-t s7 sand h280"><div class="tag"><span>연도별 기업 공저 비율</span><span class="lm-legend"><span><i style="background:{A}"></i>A</span><span><i style="background:{B}"></i>B</span></span></div>{trend}</div>'
             + f'<div class="lm-t s5 blk h280"><div class="tag"><span>파트너 기업</span><span>원 크기 = 공저 논문 수</span></div>{bub}</div>')
@@ -613,7 +699,7 @@ def sheet_size(m):
 
     def big(r, cls, wt, slot):
         dark = _on_dark(cls)
-        col = "#fff" if dark else (A if slot == "A" else B)
+        col = P["ON_" + slot] if dark else P["T" + slot]
         n_s, n_o = r["senior_count"], r["active_members"] - r["senior_count"]
         cap = 36
         shown_s, shown_o = min(n_s, cap), min(n_o, max(cap - n_s, 0))
@@ -642,8 +728,8 @@ def sheet_size(m):
         s += (f'<rect x="{354 - wa_:.1f}" y="{y}" width="{wa_:.1f}" height="40" rx="20" fill="{A}" opacity="{1 if va >= vb else .35}"/>'
               f'<rect x="446" y="{y}" width="{wb_:.1f}" height="40" rx="20" fill="{B}" opacity="{1 if vb >= va else .35}"/>'
               f'<text x="400" y="{y + 25}" text-anchor="middle" font-size="13" font-weight="600">{esc(n)}</text>'
-              f'<text x="{344 - wa_:.1f}" y="{y + 28}" text-anchor="end" font-family="Space Grotesk" font-size="22" font-weight="{700 if va >= vb else 300}" fill="{A}">{va}</text>'
-              f'<text x="{456 + wb_:.1f}" y="{y + 28}" font-family="Space Grotesk" font-size="22" font-weight="{700 if vb >= va else 300}" fill="{B}">{vb}</text>')
+              f'<text x="{344 - wa_:.1f}" y="{y + 28}" text-anchor="end" font-family="Space Grotesk" font-size="22" font-weight="{700 if va >= vb else 300}" fill="{P["TA"]}">{va}</text>'
+              f'<text x="{456 + wb_:.1f}" y="{y + 28}" font-family="Space Grotesk" font-size="22" font-weight="{700 if vb >= va else 300}" fill="{P["TB"]}">{vb}</text>')
     dist = (f'<div class="lm-t s8 out h280"><div class="tag"><span>한 논문에 몇 명이 쓰나</span><span>A ◀ 논문 수 ▶ B</span></div>'
             f'<svg width="100%" viewBox="0 0 800 210" style="margin-top:16px">{s}</svg></div>')
     return big(a, ta, wa, "A") + big(b, tb, wb, "B") + avg + dist
@@ -660,8 +746,8 @@ def sheet_cont(m):
 
     def big(r, cls, wt, slot):
         dark = _on_dark(cls)
-        col = "#fff" if dark else (A if slot == "A" else B)
-        empty = "rgba(255,255,255,.07)" if dark else ("rgba(61,90,128,.12)" if slot == "A" else "rgba(94,140,131,.14)")
+        col = P["ON_" + slot] if dark else P["T" + slot]
+        empty = rgba(col, .1 if dark else .13)
         on, c_on, label = SIG[r["signal"]]
         dots = "".join(f'<i class="{"on" if i == on else ""}" style="{"background:" + c_on if i == on else ""}"></i>' for i in range(3))
         peak = max(r["by_month"].values()) or 1
@@ -693,13 +779,41 @@ def sheet_cont(m):
     for r, c, wt in ((b, B, 300 if w != "B" else 700), (a, A, 700 if w != "B" else 300)):
         d = [r["by_year"][yy] for yy in YEARS]
         s += f'<polyline points="{" ".join(f"{x(i)},{y(v):.1f}" for i, v in enumerate(d))}" fill="none" stroke="{c}" stroke-width="4" stroke-linejoin="round"/>'
-        s += "".join(f'<circle cx="{x(i)}" cy="{y(v):.1f}" r="6" fill="#EAE7E0" stroke="{c}" stroke-width="3"/>' for i, v in enumerate(d))
-        s += f'<text x="{x(4) + 16}" y="{y(d[4]) + 8:.1f}" font-family="Space Grotesk" font-size="26" font-weight="{wt}" fill="{c}">{d[4]}편</text>'
+        s += "".join(f'<circle cx="{x(i)}" cy="{y(v):.1f}" r="6" fill="{P['SAND']}" stroke="{c}" stroke-width="3"/>' for i, v in enumerate(d))
+        s += f'<text x="{x(4) + 16}" y="{y(d[4]) + 8:.1f}" font-family="Space Grotesk" font-size="26" font-weight="{wt}" fill="{P["TA"] if r is a else P["TB"]}">{d[4]}편</text>'
     s += "".join(f'<text x="{x(i)}" y="194" text-anchor="middle" font-family="IBM Plex Mono" font-size="12">{yy}</text>' for i, yy in enumerate(YEARS))
     line = (f'<div class="lm-t s12 sand"><div class="tag"><span>연도별 논문 수</span><span class="lm-legend"><span><i style="background:{A}"></i>A</span>'
             f'<span><i style="background:{B}"></i>B</span><span><i class="lm-hatch"></i>공백 연도</span></span></div>'
             f'<svg width="100%" viewBox="0 0 1240 200" style="margin-top:12px">{s}</svg></div>')
     return big(a, ta, wa, "A") + big(b, tb, wb, "B") + line
+
+
+def _fold_bg(i):
+    """뒤로 갈수록 살짝 진한 종이 (겹친 층이 보이게)"""
+    paper = P["PAPER"] if DARK_MODE else "#FBFAF7"
+    deep = "#26262E" if DARK_MODE else "#E4E0D7"
+    return blend(deep, paper, min(i * .2, .8))
+
+
+def folders_html(order, m, chosen, title):
+    """지표 5장을 인덱스 폴더처럼 겹쳐 둠. 맨 위 장만 열려 있고, 다른 장을 누르면 그 장이 열림"""
+    parts = []
+    for i, q in enumerate(order):
+        a, b, unit, _ = headline(m, q["key"])
+        w = lead_of(a, b, unit)
+        va, vb = f"A {_fmt(a, unit)}{unit}", f"B {_fmt(b, unit)}{unit}"
+        ab = (f'<b style="color:var(--tinA)">{va}</b><s style="color:var(--tinB)">{vb}</s>' if w == "A" else
+              f'<s style="color:var(--tinA)">{va}</s><b style="color:var(--tinB)">{vb}</b>' if w == "B" else
+              f'<span style="color:var(--tinA)">{va}</span><span style="color:var(--tinB)">{vb}</span>')
+        star = '<span class="lm-hd"><span class="star">내 기준</span></span>' if q["key"] in chosen else ""
+        parts.append(
+            f'<details class="lm-fold" name="lmfold"{" open" if i == 0 else ""} style="--i:{i};background:{_fold_bg(i)}">'
+            f'<summary><span class="lm-ftab">{q["no"]}<b>{esc(q["chip"])}</b></span><span class="no">{q["no"]}</span>'
+            f'<span class="q">{esc(q["q"])} {star}</span><span class="ab">{ab}</span><span class="chev">↓</span></summary>'
+            f'<div class="lm-fbody"><div class="lm-g">{SHEETS[q["key"]](m)}</div>'
+            f'<div class="lm-slidefoot"><span>LABMATCH</span><span>{esc(title)}</span><span>{i + 1:02d} / {len(order):02d}</span></div></div></details>')
+    return (f'<div class="lm"><p class="lm-hint2">장을 누르면 펼쳐져요. 한 번에 한 장씩 열려요.</p>'
+            f'<div class="lm-folders">{"".join(parts)}</div></div>')
 
 
 SHEETS = {"top": sheet_top, "ind": sheet_ind, "mix": sheet_mix, "size": sheet_size, "cont": sheet_cont}

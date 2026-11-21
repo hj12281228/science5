@@ -129,6 +129,9 @@ export default function (component) {
     parentElement.appendChild(holder);
     root = holder.querySelector('.lm');
   }
+  // 다크모드: Streamlit 테마에 맞춰 색 바꾸기 (A·B 색은 Python이 넘겨줌)
+  root.classList.toggle('dark', D.theme === 'dark');
+  for (const [k, v] of Object.entries(D.colors || {})) root.style.setProperty('--' + k, v);
   const $ = (s) => root.querySelector(s);
   const $$ = (s) => Array.from(root.querySelectorAll(s));
   const send = (ev) => setTriggerValue('event', { ...ev, t: Date.now() });
@@ -375,7 +378,7 @@ export default function (component) {
     sky = { nodes, hover: null, raf: 0 };
     parentElement.__lmSky = sky;
     const cs = getComputedStyle(root), tok = (n, d) => (cs.getPropertyValue(n) || '').trim() || d;
-    const C = { A: tok('--A', '#3D5A80'), B: tok('--B', '#5E8C83'), ink: tok('--ink', '#1C2430'), faint: tok('--faint', '#98A2B0'), other: tok('--dot', '#7D8898') };
+    const C = { A: tok('--A', '#F24F0B'), B: tok('--B', '#B9C250'), ink: tok('--ink', '#1C2430'), faint: tok('--faint', '#98A2B0'), other: tok('--dot', '#7D8898') };
     const alpha = (hex, a) => { const h = hex.replace('#', ''); const n = parseInt(h.length === 3 ? h.replace(/./g, '$&$&') : h, 16); return `rgba(${n >> 16 & 255},${n >> 8 & 255},${n & 255},${a})`; };
     const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const draw = (t) => {

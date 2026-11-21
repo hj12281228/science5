@@ -19,9 +19,9 @@ from practice2 import render_industry_collab
 from practice3 import render_interdisciplinarity
 from practice4 import render_lab_size
 from practice5 import render_continuity
-from compare_sheets import CSS as SHEET_CSS, QUESTIONS, SHEETS, collect, headline, brief_line, brief_pick, names_html, summary_html, sheet_html
+from compare_sheets import CSS as SHEET_CSS, QUESTIONS, collect, headline, brief_line, brief_pick, names_html, summary_html, folders_html, use_palette, css_vars, P
 
-A_COLOR, B_COLOR = "#3D5A80", "#5E8C83"
+A_COLOR, B_COLOR = "#F24F0B", "#B9C250"
 
 UNI_KO = {
     "Yonsei University": "연세대", "Seoul National University": "서울대", "Korea Advanced Institute of Science and Technology": "KAIST",
@@ -41,20 +41,20 @@ CSS = """
 .lmc-steps b{color:#1C2430}
 .lmc-steps i{font-style:normal;color:#C9CFD8}
 .lmc-bar{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:12px;align-items:center}
-.lmc-pc{display:flex;align-items:center;gap:12px;border-radius:14px;padding:10px 14px;color:#fff;min-width:0}
-.lmc-pc.A{background:#3D5A80}
-.lmc-pc.B{background:#5E8C83}
+.lmc-pc{display:flex;align-items:center;gap:12px;border-radius:14px;padding:10px 14px;color:#141414;min-width:0}
+.lmc-pc.A{background:#F24F0B}
+.lmc-pc.B{background:#B9C250}
 .lmc-pc .slot{font-size:11px;letter-spacing:.12em;opacity:.8}
 .lmc-pc b{display:block;font-size:18px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lmc-pc span.sub{display:block;font-size:12.5px;opacity:.82;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lmc-pc .meta{min-width:0}
-.lmc-badge{width:40px;height:40px;flex:none;border-radius:50%;background:#fff;display:grid;place-items:center;overflow:hidden;font-weight:700;font-size:13px;color:#3D5A80}
+.lmc-badge{width:40px;height:40px;flex:none;border-radius:50%;background:#fff;display:grid;place-items:center;overflow:hidden;font-weight:700;font-size:13px;color:#E04608}
 .lmc-badge img{width:34px;height:34px;object-fit:contain}
 .lmc-vs{width:34px;height:34px;border-radius:50%;border:1px solid #E3E6EB;display:grid;place-items:center;font-weight:700;color:#5F6B7A;font-size:12px;background:#fff}
 .lmc-h{font-size:21px;font-weight:700;margin:6px 0 2px;letter-spacing:-.01em}
 .lmc-cap{font-size:13.5px;color:#5F6B7A;margin:0 0 10px}
-.st-key-lmc_side_B div.stButton > button[kind="primary"]{background:#5E8C83;border-color:#5E8C83}
-.st-key-lmc_side_B div.stButton > button[kind="primary"]:hover{background:#466F67;border-color:#466F67}
+.st-key-lmc_side_B div.stButton > button[kind="primary"]{background:#B9C250;border-color:#B9C250;color:#141414}
+.st-key-lmc_side_B div.stButton > button[kind="primary"]:hover{background:#A3AC3C;border-color:#A3AC3C;color:#141414}
 .lmc-cand{border:1px solid #DCD8CF;border-radius:18px;padding:12px 14px;display:flex;gap:12px;align-items:center;background:#fff;min-height:82px}
 .lmc-cand.on{border:2px solid var(--c);background:var(--soft)}
 .lmc-cand .nm{font-weight:700;font-size:16px}
@@ -101,7 +101,9 @@ def person_card(slot, p, sub=None):
 
 # ---------------------------------------------------------------- 공통 상단 바
 def render_bar(slots, step, on_swap):
-    st.html(CSS)
+    dark = is_dark()
+    use_palette(dark)
+    st.html(CSS + (dark_css() if dark else ""))
     with st.container(key="lmc_bar"):
         st.markdown(steps_html(step), unsafe_allow_html=True)
         st.markdown(f'<div class="lmc-bar">{person_card("A", slots.get("A"))}<div class="lmc-vs">VS</div>{person_card("B", slots.get("B"))}</div>',
@@ -124,7 +126,7 @@ def render_confirm(slots, cands, on_swap, on_research):
                 unsafe_allow_html=True)
     picked = {}
     cols = st.columns(2, gap="large")
-    for col, slot, color, soft in ((cols[0], "A", A_COLOR, "#E8EEF5"), (cols[1], "B", B_COLOR, "#E7F0EE")):
+    for col, slot, color, soft in ((cols[0], "A", P["A"], "#FDE4D9"), (cols[1], "B", P["B"], "#F1F3DC")):
         with col, st.container(key=f"lmc_side_{slot}"):
             p = slots.get(slot) or {}
             st.markdown(f"**LAB {slot} · '{esc(p.get('name', ''))}' 검색 결과**")
@@ -161,8 +163,8 @@ TOP_CSS = """
 /* 비교 화면 상단 버튼: 테두리만 있는 알약 */
 .st-key-lm_top div.stButton > button{min-height:32px;height:32px;padding:0 14px;font-size:13px;border-radius:999px;background:transparent;border:1px solid #141414;color:#141414}
 .st-key-lm_top div.stButton > button:hover{background:#141414;color:#FBFAF7}
-.st-key-lm_top .st-key-lm_swapA button{border-color:#3D5A80;color:#3D5A80}
-.st-key-lm_top .st-key-lm_swapB button{border-color:#5E8C83;color:#5E8C83}
+.st-key-lm_top .st-key-lm_swapA button{border-color:#F24F0B;color:#E04608}
+.st-key-lm_top .st-key-lm_swapB button{border-color:#B9C250;color:#7F8724}
 .lm-logo-word{font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:20px;letter-spacing:.04em;padding-top:4px}
 .st-key-lm_top{border-bottom:1px solid #141414;padding-bottom:10px}
 /* 탭: 작은 대문자 라벨 */
@@ -186,6 +188,55 @@ TOP_CSS = """
 }
 </style>
 """
+
+
+def is_dark():
+    """Streamlit 테마(설정의 Light/Dark 또는 시스템 설정)가 다크인지"""
+    try:
+        return st.context.theme.type == "dark"
+    except Exception:
+        return False
+
+
+def dark_css():
+    """다크모드: 처음부터 다크로 디자인한 것처럼 바탕·카드·버튼 색을 바꿈 (A·B 색은 다크용 조합)"""
+    a, b, ona, onb = P["A"], P["B"], P["ON_A"], P["ON_B"]
+    return f"""<style>
+.stApp,[data-testid="stHeader"]{{background:#0C0C0F}}
+.lmc-pc.A{{background:{a};color:{ona}}}.lmc-pc.B{{background:{b};color:{onb}}}
+.lmc-vs{{background:#141418;border-color:#2B2B33;color:#B7B6BE}}
+.lmc-steps{{color:#6B6A73}}.lmc-steps b{{color:#F3F2EE}}.lmc-steps i{{color:#3A3A42}}
+.st-key-lmc_bar{{background:#0C0C0F;border-bottom-color:#2B2B33}}
+.st-key-lmc_bar div.stButton > button{{color:#B7B6BE;background:transparent;border-color:#2B2B33}}
+.lmc-h{{color:#F3F2EE}}.lmc-cap{{color:#A5A4AD}}
+.lmc-cand{{background:#141418;border-color:#2B2B33;color:#F3F2EE}}
+.lmc-cand .af,.lmc-cand .tg{{color:#A5A4AD}}
+.lmc-cand.on{{border:2px solid var(--c);background:color-mix(in srgb,var(--c) 14%,#141418)}}
+.lmc-badge{{background:#fff}}
+.st-key-lmc_side_A div.stButton > button[kind="primary"]{{background:{a};border-color:{a};color:{ona}}}
+.st-key-lmc_side_B div.stButton > button[kind="primary"]{{background:{b};border-color:{b};color:{onb}}}
+.st-key-lmc_side_A div.stButton > button[kind="primary"] *{{color:{ona}}}
+.st-key-lmc_side_B div.stButton > button[kind="primary"] *{{color:{onb}}}
+div.stButton > button[kind="secondary"]{{background:transparent;border-color:#2B2B33;color:#F3F2EE}}
+div.stButton > button[kind="primary"]{{background:#F3F2EE;border-color:#F3F2EE;color:#0C0C0F}}
+div.stButton > button[kind="primary"] *{{color:#0C0C0F}}
+.st-key-lm_top{{border-bottom-color:#F3F2EE}}
+.st-key-lm_top div.stButton > button{{border-color:#F3F2EE;color:#F3F2EE;background:transparent}}
+.st-key-lm_top div.stButton > button:hover{{background:#F3F2EE;color:#0C0C0F}}
+.st-key-lm_top .st-key-lm_swapA button{{border-color:{a};color:{a}}}
+.st-key-lm_top .st-key-lm_swapB button{{border-color:{b};color:{b}}}
+.lm-logo-word{{color:#F3F2EE}}
+.st-key-lm_tabs [data-baseweb="tab-list"]{{border-bottom-color:#F3F2EE}}
+.st-key-lm_tabs [data-testid="stTab"] p{{color:#8E8D96}}
+.st-key-lm_tabs [data-testid="stTab"][aria-selected="true"] p,.st-key-lm_tabs [data-testid="stTab"]:hover p{{color:#F3F2EE}}
+.st-key-lm_tabs .react-aria-SelectionIndicator{{background:#F3F2EE!important}}
+.st-key-lmc_pref button{{background:transparent;border-color:#3A3A42;color:#F3F2EE}}
+.st-key-lmc_pref button[aria-pressed="true"]{{background:#F3F2EE!important;border-color:#F3F2EE!important;color:#0C0C0F!important}}
+.st-key-lmc_pref button[aria-pressed="true"] *{{color:#0C0C0F!important}}
+.st-key-lm_tabs [data-testid="stExpander"] details{{border-color:#2B2B33;background:#141418}}
+.st-key-lm_tabs .stDownloadButton button[kind="primary"]{{background:#F3F2EE;border-color:#F3F2EE;color:#0C0C0F}}
+.st-key-lm_tabs .stDownloadButton button[kind="primary"] *{{color:#0C0C0F}}
+</style>"""
 
 
 def _logo(school):
@@ -217,7 +268,9 @@ def _detail(key, data_a, data_b):
 
 
 def render_compare(slots, data_a, data_b, on_swap, build_txt_report, demo=False):
-    st.html(CSS + SHEET_CSS + TOP_CSS)
+    dark = is_dark()
+    use_palette(dark)
+    st.html(CSS + SHEET_CSS + TOP_CSS + css_vars() + (dark_css() if dark else ""))
     m = collect(data_a, data_b)
     pa, pb = _person("A", slots, data_a), _person("B", slots, data_b)
 
@@ -242,23 +295,26 @@ def render_compare(slots, data_a, data_b, on_swap, build_txt_report, demo=False)
     order = sorted(QUESTIONS, key=lambda q: (q["key"] not in chosen, QUESTIONS.index(q)))
 
     summaries = {}
+    title = f"{pa['name']} vs {pb['name']}"
     with st.container(key="lm_tabs"):
         t1, t2, t3 = st.tabs(["01  요약", "02  지표", "03  저장"])
 
         with t1:
-            st.markdown(summary_html(m, chosen, demo), unsafe_allow_html=True)
+            st.markdown(summary_html(m, chosen, demo, title), unsafe_allow_html=True)
 
         with t2:
-            for q in order:
-                st.markdown(sheet_html(q, SHEETS[q["key"]](m), mine=q["key"] in chosen), unsafe_allow_html=True)
-                with st.expander("ⓘ 계산 방법 · 원래 그래프와 표 자세히"):
-                    try:
-                        res = _detail(q["key"], data_a, data_b)
-                    except Exception as e:  # 한 지표가 실패해도 나머지는 보여줌
-                        st.error(f"이 지표를 그리지 못했어요: {e}")
-                        res = None
-                summaries[q["key"]] = res.get("summary") if isinstance(res, dict) else None
-                st.html('<div class="lm-gap"></div>')
+            st.markdown(folders_html(order, m, chosen, title), unsafe_allow_html=True)
+            st.html('<div class="lm-gap"></div>')
+            with st.expander("ⓘ 계산 방법 · 원래 그래프와 표 자세히 (팀원 화면)"):
+                tabs = st.tabs([f"{q['no']} {q['chip']}" for q in QUESTIONS])
+                for tab, q in zip(tabs, QUESTIONS):
+                    with tab:
+                        try:
+                            res = _detail(q["key"], data_a, data_b)
+                        except Exception as e:  # 한 지표가 실패해도 나머지는 보여줌
+                            st.error(f"이 지표를 그리지 못했어요: {e}")
+                            res = None
+                    summaries[q["key"]] = res.get("summary") if isinstance(res, dict) else None
 
         for q in QUESTIONS:
             if not summaries.get(q["key"]):

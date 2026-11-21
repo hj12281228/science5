@@ -276,9 +276,10 @@ def build_txt_report(data_a, data_b, summaries, q_a, q_b):
 st.set_page_config(page_title="LABMATCH", layout="wide")
 st.markdown(
     """<style>
-    /* 비교 화면 버튼: 팀 공통 톤 (A 남색) */
-    div.stButton > button[kind="primary"] { background:#3D5A80; border-color:#3D5A80; }
-    div.stButton > button[kind="primary"]:hover { background:#2F4867; border-color:#2F4867; }
+    /* 비교 화면 버튼: 팀 공통 톤 (A 주황) */
+    div.stButton > button[kind="primary"] * { color:#141414; }
+    div.stButton > button[kind="primary"] { background:#F24F0B; border-color:#F24F0B; color:#141414; }
+    div.stButton > button[kind="primary"]:hover { background:#D9440A; border-color:#D9440A; color:#141414; }
     </style>""",
     unsafe_allow_html=True
 )
