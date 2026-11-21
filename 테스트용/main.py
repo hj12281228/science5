@@ -1,8 +1,11 @@
 import json
+import os
 from datetime import datetime
 from pathlib import Path
 import requests
 import streamlit as st
+
+from home_page import render_home
 
 # 조원들이 만든 5개의 지표 함수 불러오기
 from practice1 import render_toptier
@@ -39,9 +42,18 @@ def load_professor_db():
                 ]
             }
         }
-        db_path.write_text(json.dumps(default_db, ensure_ascii=False, indent=4), encoding="utf-8")
+        try:
+            db_path.write_text(json.dumps(default_db, ensure_ascii=False, indent=4), encoding="utf-8")
+        except OSError:
+            pass
+    else:
+        default_db = None
 
-    db_tree = json.loads(db_path.read_text(encoding="utf-8"))
+    # 여러 사용자가 동시에 접속하면 파일을 쓰는 도중에 읽을 수 있어서, 읽기 실패 시 기본값을 씁니다.
+    try:
+        db_tree = json.loads(db_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        db_tree = default_db or {}
     name_map = {
         p["name"]: p["eng"]
         for depts in db_tree.values()
@@ -55,14 +67,32 @@ PROF_DB_TREE, PROF_NAME_MAP = load_professor_db()
 # =========================================================
 # [엔진 1, 2] OpenAlex 데이터 수집
 # =========================================================
+def _openalex_params():
+    """Streamlit secrets나 환경 변수에 OPENALEX_API_KEY가 있으면 함께 보냅니다 (없어도 동작)."""
+    key = os.environ.get("OPENALEX_API_KEY")
+    try:
+        key = st.secrets.get("OPENALEX_API_KEY", key)
+    except Exception:
+        pass
+    return {"api_key": key} if key else {}
+
+
 @st.cache_data(show_spinner=False, ttl=3600)
 def search_author_candidates(query_name):
-    search_url = f"https://api.openalex.org/authors?search={query_name}&per-page=5"
-    res = requests.get(search_url).json()
+    resp = requests.get(
+        "https://api.openalex.org/authors",
+        params={"search": query_name, "per-page": 5, **_openalex_params()},
+        timeout=20,
+    )
+    resp.raise_for_status()  # 사용량 한도(429) 등 실패한 응답은 캐시에 남기지 않음
+    res = resp.json()
     candidates = []
     for author in res.get("results", []):
         inst = "소속 정보 없음"
-        if author.get("last_known_institution"):
+        insts = author.get("last_known_institutions") or []
+        if insts:
+            inst = insts[0].get("display_name") or inst
+        elif author.get("last_known_institution"):
             inst = author["last_known_institution"].get("display_name", "소속 정보 없음")
         candidates.append({
             "id": author["id"],
@@ -74,8 +104,13 @@ def search_author_candidates(query_name):
 
 @st.cache_data(show_spinner=False, ttl=3600)
 def fetch_openalex_lab_data_by_id(author_id, author_name):
-    works_url = f"https://api.openalex.org/works?filter=author.id:{author_id}&sort=publication_year:desc&per-page=100"
-    works_res = requests.get(works_url).json()
+    resp = requests.get(
+        "https://api.openalex.org/works",
+        params={"filter": f"author.id:{author_id}", "sort": "publication_year:desc", "per-page": 100, **_openalex_params()},
+        timeout=30,
+    )
+    resp.raise_for_status()
+    works_res = resp.json()
     raw_works = works_res.get("results", [])
 
     lab_dict = {
@@ -235,143 +270,127 @@ for k in ["cands_a", "cands_b"]:
 for k in ["data_a", "data_b"]:
     if k not in st.session_state:
         st.session_state[k] = None
+if "home_slots" not in st.session_state:
+    st.session_state.home_slots = {"A": None, "B": None}
+if "home_search" not in st.session_state:
+    st.session_state.home_search = None
+if "home_last_event" not in st.session_state:
+    st.session_state.home_last_event = None
+if "home_notice" not in st.session_state:
+    st.session_state.home_notice = None
 
 # =========================================================
 # [공통 상단 바] 3개의 팝업 메뉴 (11/25 수정 사항 반영)
 # =========================================================
-top_spacer, top_btn1, top_btn2, top_btn3 = st.columns([4.5, 1.9, 1.9, 1.7])
-with top_btn1:
-    with st.popover("📊 5대 체감 지표 안내", use_container_width=True):
-        st.markdown(
-            "| 지표명 | 이용자 관점 질문 | 기준 및 시각화 안내 |\n"
-            "|---|---|---|\n"
-            "| **1. 우수 학회·저널 비중** | 주요 학회·저널 게재 빈도 | 2021~2025년 · 도넛 차트 + 피라미드 |\n"
-            "| **2. 산학·외부 협업 비율** | 기업 과제 or 학술 연구 중심? | 2021~2025년 · 타 기관·기업 공저 및 랩 주도 비율 |\n"
-            "| **3. 학제 간 융합도** | 타 전공 출신 적응 가능성 |2021-2023 vs 2024-2025 · 생키 다이어그램 |\n"
-            "| **4. 연구실 규모·사수** | 질문할 사수·동료 규모 | 진한 아이콘(사수 후보) + 연한 아이콘(일반 구성원) |\n"
-            "| **5. 연구 산출 연속성** | 논문이 꾸준히 나오는가? | 2021~2025년 · 신호등 배지 + 월별 잔디 달력 |"
-        )
-with top_btn2:
-    with st.popover("⚠️ 분석 시 주의 사항", use_container_width=True):
-        st.markdown(
-            "- **저자 식별:** 글로벌 DB 특성상 동명이인이 혼재하여 소속 기관 교차 검증 단계를 거칩니다.\n"
-            "- **영문 원칙:** 영문 검색이 원칙이나, 연세대 DB에 등록된 교수진은 한글 자동 매핑을 지원합니다.\n"
-            "- **분석 범위:** 쾌적한 시연을 위해 최근 논문 100편(핵심 지표는 2021~2025년 기준)으로 제한했습니다."
-        )
-with top_btn3:
-    with st.popover("🦅 연세대 연구자 리스트", use_container_width=True):
-        st.markdown("**[📌 단과대 및 학과별 명단 검색]**")
-        col_c, col_d = st.columns(2)
-        with col_c:
-            selected_college = st.selectbox("단과대학 선택", list(PROF_DB_TREE.keys()))
-        with col_d:
-            selected_dept = st.selectbox("학과 선택", list(PROF_DB_TREE[selected_college].keys()))
-        st.divider()
-        st.markdown(f"**💡 {selected_dept} 교수진** (클릭 시 이름 복사 가능)")
-        for prof in PROF_DB_TREE[selected_college][selected_dept]:
-            st.code(f"{prof['name']} ({prof['eng']})", language="text")
+# 첫 화면에서는 컴포넌트 안의 '이용 안내' 팝업으로 대신합니다.
+if st.session_state.step != 1:
+    top_spacer, top_btn1, top_btn2, top_btn3 = st.columns([4.5, 1.9, 1.9, 1.7])
+    with top_btn1:
+        with st.popover("📊 5대 체감 지표 안내", use_container_width=True):
+            st.markdown(
+                "| 지표명 | 이용자 관점 질문 | 기준 및 시각화 안내 |\n"
+                "|---|---|---|\n"
+                "| **1. 우수 학회·저널 비중** | 주요 학회·저널 게재 빈도 | 2021~2025년 · 도넛 차트 + 피라미드 |\n"
+                "| **2. 산학·외부 협업 비율** | 기업 과제 or 학술 연구 중심? | 2021~2025년 · 타 기관·기업 공저 및 랩 주도 비율 |\n"
+                "| **3. 학제 간 융합도** | 타 전공 출신 적응 가능성 |2021-2023 vs 2024-2025 · 생키 다이어그램 |\n"
+                "| **4. 연구실 규모·사수** | 질문할 사수·동료 규모 | 진한 아이콘(사수 후보) + 연한 아이콘(일반 구성원) |\n"
+                "| **5. 연구 산출 연속성** | 논문이 꾸준히 나오는가? | 2021~2025년 · 신호등 배지 + 월별 잔디 달력 |"
+            )
+    with top_btn2:
+        with st.popover("⚠️ 분석 시 주의 사항", use_container_width=True):
+            st.markdown(
+                "- **저자 식별:** 글로벌 DB 특성상 동명이인이 혼재하여 소속 기관 교차 검증 단계를 거칩니다.\n"
+                "- **영문 원칙:** 영문 검색이 원칙이나, 연세대 DB에 등록된 교수진은 한글 자동 매핑을 지원합니다.\n"
+                "- **분석 범위:** 쾌적한 시연을 위해 최근 논문 100편(핵심 지표는 2021~2025년 기준)으로 제한했습니다."
+            )
+    with top_btn3:
+        with st.popover("🦅 연세대 연구자 리스트", use_container_width=True):
+            st.markdown("**[📌 단과대 및 학과별 명단 검색]**")
+            col_c, col_d = st.columns(2)
+            with col_c:
+                selected_college = st.selectbox("단과대학 선택", list(PROF_DB_TREE.keys()))
+            with col_d:
+                selected_dept = st.selectbox("학과 선택", list(PROF_DB_TREE[selected_college].keys()))
+            st.divider()
+            st.markdown(f"**💡 {selected_dept} 교수진** (클릭 시 이름 복사 가능)")
+            for prof in PROF_DB_TREE[selected_college][selected_dept]:
+                st.code(f"{prof['name']} ({prof['eng']})", language="text")
 
 # =========================================================
-# [STEP 1] 검색어 입력 및 핫 트렌드 대시보드
+# [STEP 1] 첫 화면: 이름 검색 + A·B 비교함 + 학과·분야 둘러보기
 # =========================================================
+def _yonsei_first(cands):
+    """연세대 DB에서 고른 교수님은 연세대 소속 후보가 맨 위에 오도록 정렬"""
+    return sorted(cands, key=lambda c: "Yonsei" not in (c.get("institution") or ""))
+
+
+def _candidates_for(person):
+    """비교함에 담긴 사람을 동명이인 확인용 후보 목록으로 바꾸기"""
+    if person.get("oa_id"):
+        return [{
+            "id": person["oa_id"],
+            "name": person["name"],
+            "institution": person.get("aff") or "소속 정보 없음",
+            "works_count": person.get("works") or 0,
+        }]
+    query = person.get("eng") or PROF_NAME_MAP.get(person["name"], person["name"])
+    return _yonsei_first(search_author_candidates(query))
+
+
 if st.session_state.step == 1:
-    st.write("\n\n")
-    _, center_col, _ = st.columns([1.5, 5, 1.5])
-    with center_col:
-        st.markdown("<h1 style='text-align: center; font-size: 60px; margin-bottom: 0px;'>🔬 LABMATCH</h1>", unsafe_allow_html=True)
-        st.markdown("<p style='text-align: center; font-size: 18px; color: #94A3B8; margin-bottom: 35px;'>예비 대학원생을 위한 연구실 1:1 체감 지표 비교 플랫폼</p>", unsafe_allow_html=True)
+    event = render_home(
+        PROF_DB_TREE, st.session_state.home_slots, st.session_state.home_search, st.session_state.home_notice
+    )
 
-        lab_a_input = st.text_input("첫 번째 교수님 성함 입력", value=st.session_state.query_a, placeholder="예: 황도식 또는 Fei-Fei Li (한글/영문 가능)")
-        lab_b_input = st.text_input("두 번째 교수님 성함 입력", value=st.session_state.query_b, placeholder="예: Yann LeCun (한글/영문 가능)")
-        st.write("\n")
+    # 같은 이벤트가 다시 실행될 때 두 번 처리하지 않도록 t(시각)로 구분
+    if event and event.get("t") != st.session_state.home_last_event:
+        st.session_state.home_last_event = event.get("t")
+        kind = event.get("type")
+        st.session_state.home_notice = None
 
-        if st.button("🔍 동명이인 확인 및 교수님 검색", use_container_width=True):
-            if not lab_a_input.strip() or not lab_b_input.strip():
-                st.error("⚠️ 교수님 성함을 모두 입력해 주세요!")
-            else:
-                query_a_eng = PROF_NAME_MAP.get(lab_a_input.strip(), lab_a_input.strip())
-                query_b_eng = PROF_NAME_MAP.get(lab_b_input.strip(), lab_b_input.strip())
-                st.session_state.query_a = query_a_eng
-                st.session_state.query_b = query_b_eng
-                with st.spinner("글로벌 DB에서 해당하는 학자들을 찾고 있습니다..."):
-                    st.session_state.cands_a = search_author_candidates(query_a_eng)
-                    st.session_state.cands_b = search_author_candidates(query_b_eng)
-                st.session_state.step = 2
+        if kind == "slots":
+            st.session_state.home_slots = {"A": event.get("A"), "B": event.get("B")}
+            st.rerun()  # 바뀐 비교함을 화면에 바로 반영
+
+        elif kind == "search":
+            q = (event.get("q") or "").strip()
+            query = PROF_NAME_MAP.get(q, q)
+            try:
+                cands = search_author_candidates(query)
+                st.session_state.home_search = {
+                    "q": q,
+                    "results": [
+                        {"oa_id": c["id"], "name": c["name"], "inst": c["institution"], "works": c["works_count"]}
+                        for c in cands
+                    ],
+                }
+            except Exception:
+                st.session_state.home_search = {
+                    "q": q,
+                    "results": [],
+                    "error": "지금은 OpenAlex 검색이 되지 않아요. 잠시 후 다시 검색하세요.",
+                }
+            st.rerun()
+
+        elif kind == "compare" and event.get("A") and event.get("B"):
+            pa, pb = event["A"], event["B"]
+            st.session_state.home_slots = {"A": pa, "B": pb}
+            st.session_state.query_a, st.session_state.query_b = pa["name"], pb["name"]
+            try:
+                with st.spinner("교수님 정보를 확인하고 있습니다..."):
+                    st.session_state.cands_a = _candidates_for(pa)
+                    st.session_state.cands_b = _candidates_for(pb)
+                    # 두 분 모두 OpenAlex에서 정확히 고른 경우에는 동명이인 확인을 건너뜁니다.
+                    if pa.get("oa_id") and pb.get("oa_id"):
+                        st.session_state.data_a = fetch_openalex_lab_data_by_id(pa["oa_id"], pa["name"])
+                        st.session_state.data_b = fetch_openalex_lab_data_by_id(pb["oa_id"], pb["name"])
+                        st.session_state.step = 3
+                    else:
+                        st.session_state.step = 2
                 st.rerun()
-
-        st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown("""
-        <style>
-        .dashboard-box { background-color: #F8FAFC; border-radius: 10px; border: 1px solid #e2e8f0; padding: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-bottom: 20px; overflow: hidden; }
-        .ticker-wrap, .ticker-wrap-tall { overflow: hidden; position: relative; cursor: pointer; -webkit-mask-image: linear-gradient(to bottom, transparent, black 15%, black 85%, transparent); mask-image: linear-gradient(to bottom, transparent, black 15%, black 85%, transparent); }
-        .ticker-wrap { height: 90px; }
-        .ticker-wrap-tall { height: 220px; }
-        .ticker-content { text-align: center; color: #334155; font-size: 14.5px; font-weight: 600; line-height: 2.0; position: absolute; width: 100%; }
-        .anim-y { animation: scrollUpY 12s linear infinite; }
-        .ticker-wrap:hover .anim-y { animation-play-state: paused; }
-        @keyframes scrollUpY { 0% { top: 100%; transform: translateY(0); } 100% { top: 0; transform: translateY(-100%); } }
-        .anim-ai { animation: scrollUpAI 20s linear infinite; }
-        .ticker-wrap-tall:hover .anim-ai { animation-play-state: paused; }
-        @keyframes scrollUpAI { 0% { top: 100%; transform: translateY(0); } 100% { top: 0; transform: translateY(-100%); } }
-        </style>
-        """, unsafe_allow_html=True)
-
-        st.markdown("""
-        <div class="dashboard-box">
-            <h4 style="margin-top:0px; margin-bottom: 10px; color:#1F2937; text-align:center;">🦅 연세대학교 연구자 리스트 기반 추천 명단</h4>
-            <div class="ticker-wrap"><div class="ticker-content anim-y">
-                🚀 [OpenAlex 실시간 연동] DB 매핑 현황 (마우스를 올리면 멈춥니다)<br>
-                ⭐️ 공과대학: 손광훈 (전기전자공학부)<br>
-                ⭐️ 인공지능융합대학: 함범섭 (인공지능학과) / 황도식 (인공지능학과)<br>
-                ⭐️ 문과대학 (문헌정보학): 송민 / 김기영 / 주영준 / 이지연 / 김성언<br>
-                💡 상단 '연세대 연구자 리스트'에서 이름을 복사하여 검색창에 붙여넣으세요!
-            </div></div>
-        </div>
-        """, unsafe_allow_html=True)
-
-        hot_col1, hot_col2 = st.columns(2)
-        with hot_col1:
-            st.markdown("""
-            <div class="dashboard-box" style="height: 290px;">
-                <h4 style="margin-top:0px; margin-bottom: 10px; color:#1F2937; text-align:center;">🔥 글로벌 AI 트렌드 리서치</h4>
-                <div class="ticker-wrap-tall"><div class="ticker-content anim-ai">
-                    요즘 가장 핫한 글로벌 AI 연구자들을 비교해 보세요!<br><br>
-                    🤖 <strong>Sam Altman</strong> (OpenAI)<br>AGI & LLM 생태계<br><br>
-                    🧬 <strong>Demis Hassabis</strong> (Google DeepMind)<br>AlphaFold & AI for Science<br><br>
-                    🧠 <strong>Geoffrey Hinton</strong> (Univ. of Toronto)<br>Neural Networks & AI 안전성<br><br>
-                    👁️ <strong>Fei-Fei Li</strong> (Stanford Univ)<br>Computer Vision & 인간 중심 AI<br><br>
-                    ⚙️ <strong>Yann LeCun</strong> (Meta AI)<br>Self-Supervised Learning<br><br>
-                    🚀 <strong>Andrej Karpathy</strong> (Eureka Labs)<br>AI Education & 자율주행<br><br>
-                    💡 영어 이름을 그대로 검색창에 입력해 보세요!
-                </div></div>
-            </div>
-            """, unsafe_allow_html=True)
-
-        with hot_col2:
-            st.markdown("""
-            <div class="dashboard-box" style="height: 290px; display: flex; flex-direction: column; justify-content: space-between;">
-                <div>
-                    <h4 style="margin-top:0px; color:#1F2937;">🌐 OpenAlex 인기 학문 분야</h4>
-                    <p style="font-size:13px; color:#4B5563; margin-bottom:5px;">글로벌 논문 DB에서 가장 활발히 인용되는 최상위 분야입니다.</p>
-                    <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px;">
-                        <span style="background:#E5E7EB; padding: 4px 8px; border-radius: 4px; font-size:12px; font-weight:bold; color:#374151;">Computer Science</span>
-                        <span style="background:#E5E7EB; padding: 4px 8px; border-radius: 4px; font-size:12px; font-weight:bold; color:#374151;">Medicine</span>
-                        <span style="background:#E5E7EB; padding: 4px 8px; border-radius: 4px; font-size:12px; font-weight:bold; color:#374151;">Materials Science</span>
-                    </div>
-                </div>
-                <hr style="margin: 15px 0; border-top: 1px dashed #CBD5E1;">
-                <div>
-                    <h4 style="margin-top:0px; color:#1F2937;">🚀 2026 급부상 융합 연구 키워드</h4>
-                    <p style="font-size:13px; color:#4B5563; margin-bottom:5px;">랩매치가 주목하는 차세대 학제 간 융합 테마입니다.</p>
-                    <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px;">
-                        <span style="color:#2563EB; font-size:13px; font-weight:bold;">#Bio_Informatics</span>
-                        <span style="color:#059669; font-size:13px; font-weight:bold;">#Climate_Tech</span>
-                        <span style="color:#D97706; font-size:13px; font-weight:bold;">#Quantum_AI</span>
-                        <span style="color:#7C3AED; font-size:13px; font-weight:bold;">#Neuro_Symbolic</span>
-                    </div>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+            except Exception:
+                st.session_state.home_notice = "OpenAlex에서 정보를 불러오지 못했습니다. 잠시 후 다시 시도하세요."
+                st.rerun()
 
 # =========================================================
 # [STEP 2] 동명이인 걸러내기
@@ -410,11 +429,15 @@ elif st.session_state.step == 2:
             if sel_a and sel_b:
                 name_a = [c["name"] for c in st.session_state.cands_a if c["id"] == sel_a][0]
                 name_b = [c["name"] for c in st.session_state.cands_b if c["id"] == sel_b][0]
-                with st.spinner("선택하신 교수님의 최근 100편 논문을 수집해 분석 중입니다..."):
-                    st.session_state.data_a = fetch_openalex_lab_data_by_id(sel_a, name_a)
-                    st.session_state.data_b = fetch_openalex_lab_data_by_id(sel_b, name_b)
-                st.session_state.step = 3
-                st.rerun()
+                try:
+                    with st.spinner("선택하신 교수님의 최근 100편 논문을 수집해 분석 중입니다..."):
+                        st.session_state.data_a = fetch_openalex_lab_data_by_id(sel_a, name_a)
+                        st.session_state.data_b = fetch_openalex_lab_data_by_id(sel_b, name_b)
+                except Exception:
+                    st.error("OpenAlex에서 논문을 불러오지 못했습니다. 잠시 후 다시 시도하세요.")
+                else:
+                    st.session_state.step = 3
+                    st.rerun()
 
 # =========================================================
 # [STEP 3] 5대 핵심 체감 지표 분석 (한 줄 요약 자동 수집)
