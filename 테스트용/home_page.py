@@ -49,17 +49,19 @@ def load_logos():
     return out
 
 
-def yonsei_list(db_tree):
-    """professors_db.json 트리를 화면용 목록으로 펼치기"""
+def yonsei_list(db_tree, profiles=None):
+    """professors_db.json 트리를 화면용 목록으로 펼치기 (profiles가 있으면 연구 분야·논문 수도 붙임)"""
+    profiles = profiles or {}
     return [
-        {"name": p["name"], "eng": p.get("eng", ""), "col": col, "dept": dept}
+        {"name": p["name"], "eng": p.get("eng", ""), "col": col, "dept": dept,
+         "tags": profiles.get(p["name"], {}).get("tags", []), "works": profiles.get(p["name"], {}).get("works")}
         for col, depts in db_tree.items()
         for dept, profs in depts.items()
         for p in profs
     ]
 
 
-def render_home(db_tree, slots, search, notice=None):
+def render_home(db_tree, slots, search, notice=None, profiles=None):
     """첫 화면을 그리고, 사용자가 방금 한 행동(event)을 돌려줍니다. 없으면 None."""
     from compare_sheets import P, use_palette
     try:
@@ -73,7 +75,7 @@ def render_home(db_tree, slots, search, notice=None):
     result = comp(
         data={
             "slots": slots,
-            "yonsei": yonsei_list(db_tree),
+            "yonsei": yonsei_list(db_tree, profiles),
             "fields": load_field_snapshot(),
             "search": search,
             "notice": notice,

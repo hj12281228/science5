@@ -21,7 +21,7 @@ from practice4 import render_lab_size
 from practice5 import render_continuity
 from compare_sheets import CSS as SHEET_CSS, QUESTIONS, collect, headline, brief_line, brief_pick, names_html, summary_html, folders_html, use_palette, css_vars, P
 
-A_COLOR, B_COLOR = "#F24F0B", "#B9C250"
+A_COLOR, B_COLOR = "#93BAB5", "#F5CB71"
 
 UNI_KO = {
     "Yonsei University": "연세대", "Seoul National University": "서울대", "Korea Advanced Institute of Science and Technology": "KAIST",
@@ -42,19 +42,19 @@ CSS = """
 .lmc-steps i{font-style:normal;color:#C9CFD8}
 .lmc-bar{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:12px;align-items:center}
 .lmc-pc{display:flex;align-items:center;gap:12px;border-radius:14px;padding:10px 14px;color:#141414;min-width:0}
-.lmc-pc.A{background:#F24F0B}
-.lmc-pc.B{background:#B9C250}
+.lmc-pc.A{background:#93BAB5}
+.lmc-pc.B{background:#F5CB71}
 .lmc-pc .slot{font-size:11px;letter-spacing:.12em;opacity:.8}
 .lmc-pc b{display:block;font-size:18px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lmc-pc span.sub{display:block;font-size:12.5px;opacity:.82;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lmc-pc .meta{min-width:0}
-.lmc-badge{width:40px;height:40px;flex:none;border-radius:50%;background:#fff;display:grid;place-items:center;overflow:hidden;font-weight:700;font-size:13px;color:#E04608}
+.lmc-badge{width:40px;height:40px;flex:none;border-radius:50%;background:#fff;display:grid;place-items:center;overflow:hidden;font-weight:700;font-size:13px;color:#457670}
 .lmc-badge img{width:34px;height:34px;object-fit:contain}
 .lmc-vs{width:34px;height:34px;border-radius:50%;border:1px solid #E3E6EB;display:grid;place-items:center;font-weight:700;color:#5F6B7A;font-size:12px;background:#fff}
 .lmc-h{font-size:21px;font-weight:700;margin:6px 0 2px;letter-spacing:-.01em}
 .lmc-cap{font-size:13.5px;color:#5F6B7A;margin:0 0 10px}
-.st-key-lmc_side_B div.stButton > button[kind="primary"]{background:#B9C250;border-color:#B9C250;color:#141414}
-.st-key-lmc_side_B div.stButton > button[kind="primary"]:hover{background:#A3AC3C;border-color:#A3AC3C;color:#141414}
+.st-key-lmc_side_B div.stButton > button[kind="primary"]{background:#F5CB71;border-color:#F5CB71;color:#141414}
+.st-key-lmc_side_B div.stButton > button[kind="primary"]:hover{background:#EDBB4F;border-color:#EDBB4F;color:#141414}
 .lmc-cand{border:1px solid #DCD8CF;border-radius:18px;padding:12px 14px;display:flex;gap:12px;align-items:center;background:#fff;min-height:82px}
 .lmc-cand.on{border:2px solid var(--c);background:var(--soft)}
 .lmc-cand .nm{font-weight:700;font-size:16px}
@@ -126,7 +126,7 @@ def render_confirm(slots, cands, on_swap, on_research):
                 unsafe_allow_html=True)
     picked = {}
     cols = st.columns(2, gap="large")
-    for col, slot, color, soft in ((cols[0], "A", P["A"], "#FDE4D9"), (cols[1], "B", P["B"], "#F1F3DC")):
+    for col, slot, color, soft in ((cols[0], "A", P["A"], "#E4EEED"), (cols[1], "B", P["B"], "#FDF3DD")):
         with col, st.container(key=f"lmc_side_{slot}"):
             p = slots.get(slot) or {}
             st.markdown(f"**LAB {slot} · '{esc(p.get('name', ''))}' 검색 결과**")
@@ -163,8 +163,8 @@ TOP_CSS = """
 /* 비교 화면 상단 버튼: 테두리만 있는 알약 */
 .st-key-lm_top div.stButton > button{min-height:32px;height:32px;padding:0 14px;font-size:13px;border-radius:999px;background:transparent;border:1px solid #141414;color:#141414}
 .st-key-lm_top div.stButton > button:hover{background:#141414;color:#FBFAF7}
-.st-key-lm_top .st-key-lm_swapA button{border-color:#F24F0B;color:#E04608}
-.st-key-lm_top .st-key-lm_swapB button{border-color:#B9C250;color:#7F8724}
+.st-key-lm_top .st-key-lm_swapA button{border-color:#93BAB5;color:#457670}
+.st-key-lm_top .st-key-lm_swapB button{border-color:#F5CB71;color:#946600}
 .lm-logo-word{font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:20px;letter-spacing:.04em;padding-top:4px}
 .st-key-lm_top{border-bottom:1px solid #141414;padding-bottom:10px}
 /* 탭: 작은 대문자 라벨 */
