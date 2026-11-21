@@ -110,14 +110,21 @@ def fetch_openalex_lab_data_by_id(author_id, author_name):
             "field_ids": concepts
         })
 
-        venue_name = w.get("primary_location", {}).get("source", {})
-        venue_name = venue_name.get("display_name", "") if venue_name else ""
+        loc = w.get("primary_location") or {}
+        src = loc.get("source") or {}
+        venue_name = src.get("display_name", "")
+        venue_type = src.get("type", "")
+        source_impact = (src.get("summary_stats") or {}).get("2yr_mean_citedness")
+
         lab_dict["toptier_papers"].append({
             "title": w.get("title", ""),
             "year": year,
             "venue": venue_name,
+            "venue_type": venue_type,
             "type": w.get("type", ""),
-            "url": w.get("id", "")
+            "url": w.get("id", ""),
+            "citation_normalized_percentile": w.get("citation_normalized_percentile"),
+            "2yr_mean_citedness": source_impact
         })
 
         is_external, is_industry = False, False
