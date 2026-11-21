@@ -115,7 +115,7 @@ export default function (component) {
   ensureFonts();
   const D = data || {};
   const slots = { A: (D.slots && D.slots.A) || null, B: (D.slots && D.slots.B) || null };
-  const YON = (D.yonsei || []).map((p) => ({ ...p, key: 'y:' + p.name, aff: `연세대 ${p.dept}`, school: '연세대', sub: p.dept }));
+  const YON = (D.yonsei || []).map((p) => ({ ...p, key: 'y:' + p.name, aff: `연세대 ${p.dept}`, school: '연세대', sub: p.dept, tags: p.tags || [], works_label: p.works != null ? '전체 논문' : undefined }));
   const LOGOS = D.logos || {};
   const badge = (school, cls = '') => LOGOS[school]
     ? `<span class="badge ${cls}"><img src="${LOGOS[school]}" alt="${esc(school)}"></span>`
@@ -152,15 +152,17 @@ export default function (component) {
     const school = p.school || p.aff || '';
     const sub = p.sub || (p.inst && p.inst !== school ? p.inst : '');
     const tags = (p.tags || []).filter(Boolean);
-    const tagHTML = tags.slice(0, 2).map((t) => `<span class="tag">${esc(t)}</span>`).join('') + (tags.length > 2 ? `<span class="tag more">+${tags.length - 2}</span>` : '');
+    const tagHTML = tags.length
+      ? tags.slice(0, 3).map((t) => `<span class="tag">${esc(t)}</span>`).join('') + (tags.length > 3 ? `<span class="tag more">+${tags.length - 3}</span>` : '')
+      : '<span class="none">논문 데이터를 받으면 표시돼요</span>';
     const stat = p.works != null
       ? `<span>${esc(p.works_label === '3년 논문' ? '최근 3년 논문' : p.works_label || '논문')}</span><b>${p.works}<small> 편</small></b>`
       : `<span>${esc(p.col || '')}</span>`;
     return `<div class="sheen"></div>
-      <div class="ctop"><div class="slot">LAB ${slot}</div><button class="rm" type="button" data-rm="${slot}">빼기</button></div>
+      <div class="ctop"><div class="slot">LAB ${slot}</div><button class="rm" type="button" data-rm="${slot}" aria-label="${slot} 칸에서 빼기" title="빼기">−</button></div>
       <div class="school">${badge(school)}<div class="sch"><b>${esc(school || '소속 정보 없음')}</b>${sub ? `<span title="${esc(sub)}">${esc(sub)}</span>` : ''}</div></div>
       <div class="nmbox"><div class="pn" title="${esc(p.name)}">${esc(p.name)}</div></div><div class="pe">${esc(p.eng || '')}</div>
-      <div class="tags">${tagHTML}</div>
+      <div class="flabel">연구 분야</div><div class="tags">${tagHTML}</div>
       <div class="stats">${stat}</div>`;
   }
   // 한글 이름(띄어쓰기 없음)은 1줄, 영문 이름은 2줄까지. 큰 글자부터 줄여 보고, 최소 크기에서도 넘치면 말줄임(마우스를 올리면 전체 이름)
@@ -180,7 +182,7 @@ export default function (component) {
     box.classList.add('measure');
     const all = Array.from(box.querySelectorAll('.tag:not(.more)'));
     let more = box.querySelector('.more'), hidden = more ? +more.textContent.slice(1) : 0;
-    while (box.scrollWidth > box.clientWidth + 1 && all.length > 1) {
+    while ((box.scrollHeight > box.clientHeight + 1 || box.scrollWidth > box.clientWidth + 1) && all.length > 1) {
       all.pop().remove(); hidden++;
       if (!more) { more = document.createElement('span'); more.className = 'tag more'; box.appendChild(more); }
       more.textContent = '+' + hidden;
@@ -276,6 +278,9 @@ export default function (component) {
       const onA = sameP(slots.A, p), onB = sameP(slots.B, p);
       el.innerHTML = `<div class="eyebrow">${esc(p.col)}</div><div class="pn">${esc(p.name)}</div><div class="pe">${esc(p.eng)}</div>
         <div class="pd">${esc(p.dept)}</div>
+        <div class="flabel">연구 분야</div>
+        <div class="ftags">${(p.tags || []).length ? p.tags.slice(0, 3).map((t) => `<span>${esc(t)}</span>`).join('') : '<em>논문 데이터를 받으면 표시돼요</em>'}</div>
+        ${p.works != null ? `<div class="fw"><span>전체 논문</span><b>${p.works}<small> 편</small></b></div>` : ''}
         <div class="acts"><button class="add a ${onA ? 'on' : ''}" type="button" data-add="A" data-key="${esc(p.key)}">${onA ? 'A에 담김' : 'A에 담기'}</button><button class="add b ${onB ? 'on' : ''}" type="button" data-add="B" data-key="${esc(p.key)}">${onB ? 'B에 담김' : 'B에 담기'}</button></div>`;
       el.dataset.idx = i;
       st.appendChild(el);
@@ -378,7 +383,7 @@ export default function (component) {
     sky = { nodes, hover: null, raf: 0 };
     parentElement.__lmSky = sky;
     const cs = getComputedStyle(root), tok = (n, d) => (cs.getPropertyValue(n) || '').trim() || d;
-    const C = { A: tok('--A', '#F24F0B'), B: tok('--B', '#B9C250'), ink: tok('--ink', '#1C2430'), faint: tok('--faint', '#98A2B0'), other: tok('--dot', '#7D8898') };
+    const C = { A: tok('--A', '#93BAB5'), B: tok('--B', '#F5CB71'), ink: tok('--ink', '#1C2430'), faint: tok('--faint', '#98A2B0'), other: tok('--dot', '#7D8898') };
     const alpha = (hex, a) => { const h = hex.replace('#', ''); const n = parseInt(h.length === 3 ? h.replace(/./g, '$&$&') : h, 16); return `rgba(${n >> 16 & 255},${n >> 8 & 255},${n & 255},${a})`; };
     const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const draw = (t) => {

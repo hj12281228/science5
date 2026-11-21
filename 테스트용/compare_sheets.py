@@ -16,18 +16,18 @@ from practice3 import summarize as summarize_fields
 from practice4 import compute_lab_size
 from practice5 import compute_continuity
 
-A, B = "#F24F0B", "#B9C250"
+A, B = "#93BAB5", "#F5CB71"
 INK, MU, HA = "#141414", "#8A877F", "#9A968D"
 YEARS = list(range(2021, 2026))
 esc = html.escape
 
 # ---------------------------------------------------------------- 색 (라이트 / 다크)
-# 라이트: 주황 #F24F0B · 올리브 #B9C250 / 다크: 라벤더 #9989F1 · 연두 #B5DC8A (확정)
-# TA·TB는 글씨용 색. 올리브는 흰 바탕 글씨로 쓰기엔 옅어서 조금 진하게 씀.
-LIGHT = dict(A="#F24F0B", B="#B9C250", TA="#E04608", TB="#7F8724", INK="#141414", MU="#8A877F", HA="#9A968D",
+# 라이트: 세이지 #93BAB5 · 머스터드 #F5CB71 / 다크: 라벤더 #9989F1 · 연두 #B5DC8A (확정)
+# TA·TB는 글씨용 색. 라이트 두 색은 흰 바탕 글씨로 쓰기엔 옅어서 진하게 씀.
+LIGHT = dict(A="#93BAB5", B="#F5CB71", TA="#457670", TB="#946600", INK="#141414", MU="#8A877F", HA="#9A968D",
              ON_A="#141414", ON_B="#141414",
-             AT="#FDE4D9", BT="#F1F3DC", SAND="#EAE7E0", GRID="#D3CFC5", PAPER="#FFFFFF", ON_BLK="#FFFFFF",
-             BUB_A="#F79A72", BUB_C="#B5B1A8", BUB_B="#D3D88F", BUB_TXT="#141414")
+             AT="#E4EEED", BT="#FDF3DD", SAND="#EAE7E0", GRID="#D3CFC5", PAPER="#FFFFFF", ON_BLK="#FFFFFF",
+             BUB_A="#AECBC8", BUB_C="#C9C5BC", BUB_B="#F8D894", BUB_TXT="#141414")
 DARK = dict(INK="#F3F2EE", MU="#8E8D96", HA="#6B6A73", SAND="#1D1D23", GRID="#34343C", PAPER="#141418", ON_BLK="#F3F2EE",
             BUB_C="#8E8D96", BUB_TXT="#0B0B0D",
             A="#9989F1", B="#B5DC8A", TA="#9989F1", TB="#B5DC8A", ON_A="#0B0B0D", ON_B="#0B0B0D")
@@ -66,7 +66,7 @@ def css_vars():
     page = "#0C0C0F" if DARK_MODE else "#FFFFFF"
     return (f"<style>.lm{{--paper:{p['PAPER'] if DARK_MODE else '#FBFAF7'};--ink:{p['INK']};--mute:{p['MU']};--line:{'#2B2B33' if DARK_MODE else '#DCD8CF'};"
             f"--A:{p['A']};--B:{p['B']};--At:{p['AT']};--Bt:{p['BT']};--sand:{p['SAND']};--onA:{p['ON_A']};--onB:{p['ON_B']};"
-            f"--blk:{blk};--page:{page};--hatch:{p['HA']};--tA:{p['TA']};--tB:{p['TB']};--tinA:{p['TA'] if not DARK_MODE else blend(p['A'], '#FFFFFF', .85)};"
+            f"--blk:{blk};--page:{page};--hatch:{p['HA']};--tA:{p['TA']};--tB:{p['TB']};--bandA:{'transparent' if DARK_MODE else p['A']};--bandB:{'transparent' if DARK_MODE else p['B']};--nmA:{p['A'] if DARK_MODE else p['INK']};--nmB:{p['B'] if DARK_MODE else p['INK']};--tinA:{p['TA'] if not DARK_MODE else blend(p['A'], '#FFFFFF', .85)};"
             f"--tinB:{p['TB'] if not DARK_MODE else blend(p['B'], '#FFFFFF', .85)};"
             f"--lbA:{p['A']};--lbB:{p['B']}}}</style>")
 
@@ -90,7 +90,7 @@ QUESTIONS = [
 CSS = """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
-.lm{--paper:#FBFAF7;--ink:#141414;--mute:#8A877F;--line:#DCD8CF;--A:#F24F0B;--B:#B9C250;--tA:#E04608;--tB:#7F8724;--At:#FDE4D9;--Bt:#F1F3DC;--sand:#EAE7E0;
+.lm{--paper:#FBFAF7;--ink:#141414;--mute:#8A877F;--line:#DCD8CF;--A:#93BAB5;--B:#F5CB71;--tA:#457670;--tB:#946600;--At:#E4EEED;--Bt:#FDF3DD;--sand:#EAE7E0;
  --disp:"Space Grotesk","IBM Plex Sans KR",sans-serif;--kr:"IBM Plex Sans KR","Apple SD Gothic Neo",sans-serif;--mono:"IBM Plex Mono",ui-monospace,monospace;
  font-family:var(--kr);color:var(--ink);line-height:1.35}
 .lm *{box-sizing:border-box}
@@ -104,7 +104,9 @@ CSS = """
 /* 이름 */
 .lm-names{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:end;gap:24px;margin:12px 0 26px}
 .lm-nm{font-weight:700;font-size:clamp(40px,6.4vw,92px);line-height:.98;letter-spacing:-.04em;min-width:0;overflow-wrap:anywhere;word-break:keep-all}
-.lm-nm.A{color:var(--tA)}.lm-nm.B{color:var(--tB);text-align:right}
+.lm-nm.A{color:var(--nmA,var(--ink))}.lm-nm.B{color:var(--nmB,var(--ink));text-align:right}
+.lm-nm .nm{background:linear-gradient(transparent 58%,var(--bandA) 58%,var(--bandA) 92%,transparent 92%);padding:0 .06em;-webkit-box-decoration-break:clone;box-decoration-break:clone}
+.lm-nm.B .nm{background:linear-gradient(transparent 58%,var(--bandB) 58%,var(--bandB) 92%,transparent 92%)}
 .lm-nm small{display:flex;align-items:center;gap:10px;font-size:15px;font-weight:500;letter-spacing:0;color:var(--ink);margin-bottom:12px;min-width:0}
 .lm-nm small span.t{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lm-nm.B small{justify-content:flex-end}
@@ -155,12 +157,14 @@ CSS = """
 .out{background:var(--paper);border:1px solid var(--ink)}
 .sand{background:var(--sand)}
 .blk{background:var(--blk);color:#F3F2EE;border:1px solid var(--line)}.blk .tag{color:rgba(243,242,238,.55)}
-.h300{min-height:320px}.h280{min-height:280px}
+.h300{min-height:350px}.h280{min-height:280px}
+.lm-t:has(.lm-foot){padding-bottom:92px}
 .lm-ring{position:absolute;right:26px;top:24px}
+.lm-ring + .tag.hd .tt{max-width:calc(100% - 140px)}
 .lm-huge{font-family:var(--disp);letter-spacing:-.05em;line-height:.85;font-size:clamp(64px,7.6vw,112px)}
 .lm-huge.b{font-weight:700}.lm-huge.l{font-weight:300}.lm-huge.m{font-weight:500}
 .lm-huge u{text-decoration:none;font-size:.36em;font-weight:400;margin-left:4px;letter-spacing:0}
-.lm-mt{margin-top:64px}
+.lm-mt{margin-top:36px}
 .lm-sub{font-family:var(--mono);font-size:12px;letter-spacing:.02em;margin-top:12px;opacity:.85}
 .lm-foot{position:absolute;left:26px;right:26px;bottom:22px}
 .lm-row{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;gap:10px}
@@ -189,6 +193,30 @@ CSS = """
 .lm-grass{margin-top:18px;display:grid;grid-template-columns:40px repeat(12,minmax(0,1fr));gap:4px;align-items:center}
 .lm-grass span{aspect-ratio:1;border-radius:4px}
 .lm-grass em{font-style:normal;font-family:var(--mono);font-size:11px;opacity:.75}
+/* 박스 제목: 무슨 그래프인지 먼저 읽히게 */
+.lm .tag.hd{align-items:flex-start;gap:16px}
+.lm .tag.hd .tt{display:flex;flex-direction:column;gap:4px;min-width:0}
+.lm .tag.hd .tt b{font-family:var(--kr);font-size:17px;font-weight:700;letter-spacing:-.01em;color:var(--ink);line-height:1.3}
+.lm .tag.hd .tt b i{font-style:normal;font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:.08em;margin-right:8px;opacity:.6;vertical-align:2px}
+.lm .tag.hd .tt span{font-family:var(--kr);font-size:13px;letter-spacing:0;line-height:1.45;color:var(--mute)}
+.lm .tag.hd > span{flex:none;padding-top:4px}
+.solA .tag.hd .tt b,.solB .tag.hd .tt b,.tinA .tag.hd .tt b,.tinB .tag.hd .tt b,.blk .tag.hd .tt b{color:inherit}
+.solA .tag.hd .tt span,.solB .tag.hd .tt span,.tinA .tag.hd .tt span,.tinB .tag.hd .tt span{color:inherit;opacity:.8}
+.blk .tag.hd .tt b{color:#F3F2EE}.blk .tag.hd .tt span{color:#F3F2EE;opacity:.62}
+.solA .tag.hd,.solB .tag.hd,.tinA .tag.hd,.tinB .tag.hd{opacity:1}
+.lm-key{display:flex;align-items:center;gap:6px;margin-top:16px;font-size:12.5px;flex-wrap:wrap}
+.lm-key svg{width:14px;height:17px}.lm-key span{margin-right:10px;opacity:.85}
+/* 신호등 */
+.lm-lights{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:22px}
+.lm-light{display:flex;align-items:center;gap:22px;min-width:0}
+.lm-light .sl{font-family:var(--mono);font-size:12px;letter-spacing:.08em;opacity:.7;writing-mode:vertical-rl;transform:rotate(180deg)}
+.lm-light .box{display:flex;gap:12px;padding:12px 16px;border-radius:999px;background:#0A0A0C;border:1px solid #2E2E36;flex:none}
+.lm-light .box i{width:34px;height:34px;border-radius:50%;background:var(--c);opacity:.16}
+.lm-light .box i.on{opacity:1;box-shadow:0 0 0 4px color-mix(in srgb,var(--c) 28%,transparent),0 0 26px 2px var(--c)}
+.lm-light b{display:block;font-size:clamp(26px,2.6vw,36px);font-weight:700;letter-spacing:-.02em;line-height:1.1}
+.lm-light p{font-size:13.5px;opacity:.75;margin-top:6px!important;line-height:1.45}
+@media (max-width:900px){.lm-lights{grid-template-columns:1fr}.lm-light .box i{width:26px;height:26px}}
+@media (max-width:700px){.lm .tag.hd{flex-wrap:wrap}.lm .tag.hd > span{width:100%;padding-top:0}.lm-ring{width:84px;height:84px}.lm-ring + .tag.hd .tt{max-width:calc(100% - 96px)}}
 .lm-sig{display:flex;gap:6px;align-items:center;font-size:13px;font-family:var(--kr);letter-spacing:0}
 .lm-sig i{width:12px;height:12px;border-radius:50%;display:inline-block;background:currentColor;opacity:.25}
 .lm-sig i.on{opacity:1}
@@ -198,19 +226,20 @@ CSS = """
 .lm svg text:not([fill]){fill:var(--ink)}
 /* 인덱스 폴더: 지표 5장을 겹쳐 두고, 누르면 열림 (한 번에 한 장) */
 :root{interpolate-size:allow-keywords}
-.lm-folders{position:relative;padding-top:44px;perspective:1800px}
-.lm-fold{position:relative;border:1px solid var(--line);border-radius:0 26px 26px 26px;margin-top:-2px;
- box-shadow:0 -14px 30px -22px rgba(0,0,0,.45);transform-origin:50% 0;transform-style:preserve-3d;
- transition:transform .7s cubic-bezier(.16,1,.3,1),box-shadow .7s cubic-bezier(.16,1,.3,1),background-color .4s}
+.lm-folders{position:relative;padding-top:44px}
+/* 정면에서 보는 겹친 폴더. 그림자는 폴더+탭 모양 그대로 떨어지게 drop-shadow로 (탭 아래로 그림자가 비치지 않음) */
+.lm-fold{position:relative;border:1px solid var(--line);border-radius:0 26px 26px 26px;margin-top:-2px;background:var(--fbg);
+ filter:drop-shadow(0 -8px 14px rgba(0,0,0,.07));transition:transform .6s cubic-bezier(.16,1,.3,1),background-color .4s}
 .lm-fold:first-child{margin-top:0}
-.lm-fold:not([open]){transform:rotateX(12deg)}
-.lm-fold:not([open]):hover{transform:rotateX(0deg) translateY(-10px);box-shadow:0 -18px 34px -18px rgba(0,0,0,.5)}
-.lm-fold[open]{transform:none;background:var(--paper)!important}
-.lm-fold > summary{background:inherit;border-radius:inherit;list-style:none;cursor:pointer;display:grid;grid-template-columns:44px minmax(0,1fr) auto 40px;align-items:center;gap:12px;padding:22px 36px 44px;position:relative}
+.lm-fold:not([open]):hover{transform:translateY(-8px)}
+.lm-fold[open]{--fbg:var(--paper)}
+.lm-fold > summary{background:var(--fbg);border-radius:inherit;list-style:none;cursor:pointer;display:grid;grid-template-columns:44px minmax(0,1fr) auto auto 40px;align-items:center;gap:14px;padding:22px 36px 44px;position:relative}
 .lm-fold > summary::-webkit-details-marker{display:none}
 .lm-fold > summary:focus-visible{outline:2px solid var(--A);outline-offset:-4px;border-radius:20px}
-.lm-ftab{position:absolute;top:-35px;left:calc(var(--i) * 168px - 1px);height:36px;min-width:150px;padding:0 18px;border:1px solid var(--line);border-bottom:0;
- border-radius:14px 14px 0 0;background:inherit;display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:11px;letter-spacing:.06em;color:var(--mute)}
+.lm-ftab{position:absolute;z-index:2;top:-35px;left:calc(var(--i) * 168px - 1px);height:36px;min-width:150px;padding:0 18px;border:1px solid var(--line);border-bottom:0;
+ border-radius:14px 14px 0 0;background:var(--fbg);display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:11px;letter-spacing:.06em;color:var(--mute)}
+.lm-ftab::after{content:"";position:absolute;left:0;right:0;bottom:-2px;height:3px;background:var(--fbg)}
+.lm-fold > summary .mine{font-size:12px;font-weight:600;color:var(--paper);background:var(--ink);border-radius:999px;padding:4px 11px;white-space:nowrap}
 .lm-ftab b{font-family:var(--kr);font-size:13px;letter-spacing:0;color:var(--ink);font-weight:600}
 .lm-fold > summary .no{font-family:var(--mono);font-size:13px;color:var(--mute)}
 .lm-fold > summary .q{font-size:clamp(22px,2.4vw,34px);font-weight:700;letter-spacing:-.03em;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -231,6 +260,7 @@ CSS = """
 @media (max-width:1100px){.lm-ftab{left:calc(var(--i) * 112px - 1px);min-width:104px;padding:0 12px}.lm-ftab b{display:none}.lm-fold > summary{padding:22px 22px 30px}.lm-fbody{padding:0 22px 30px}}
 @media (max-width:700px){.lm-ftab{left:calc(var(--i) * 64px - 1px);min-width:58px;padding:0 10px;top:-29px;height:30px}
  .lm-fold > summary{grid-template-columns:28px minmax(0,1fr) 28px;padding:18px 14px 42px}.lm-fold > summary .ab{grid-column:2;font-size:18px}
+ .lm-fold > summary > span:empty{display:none}.lm-fold > summary .mine{grid-column:2;justify-self:start;font-size:11px;padding:2px 9px}.lm-fold > summary .chev{grid-column:3;grid-row:1}
  .lm-fold[open] > summary .ab{display:none}.lm-fbody{padding:0 12px 24px}.lm-slidefoot span:nth-child(2){display:none}}
 @media (max-width:1100px){
  .lm-bento{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -370,7 +400,7 @@ def names_html(pa, pb, logo_a, logo_b):
         eng = f'<span class="eng">{esc(p["eng"])}</span>' if p.get("eng") else ""
         lg = f'<span class="lm-logo">{logo}</span>'
         meta = f'{lg}<span class="t">{esc(sub)}</span>' if slot == "A" else f'<span class="t">{esc(sub)}</span>{lg}'
-        return f'<div class="lm-nm {slot}"><small>{meta}</small>{esc(p.get("name") or "")}{eng}</div>'
+        return f'<div class="lm-nm {slot}"><small>{meta}</small><span class="nm">{esc(p.get("name") or "")}</span>{eng}</div>'
     return f'<div class="lm"><div class="lm-names">{side(pa, logo_a, "A")}<div class="lm-vs">vs</div>{side(pb, logo_b, "B")}</div></div>'
 
 
@@ -449,7 +479,7 @@ def sheet_top(m):
         sub = f'{r["n_top"]} / {r["n_all"]}편'
         if r["ratio"] > other["ratio"] and w:
             sub += f' · {"B" if slot == "A" else "A"}보다 +{r["ratio"] - other["ratio"]:.1f}%p'
-        return (f'<div class="lm-t s4 {cls} h300">{_ring(r["ratio"], col, track)}<div class="tag"><span>LAB {slot} · 우수 비중</span></div>'
+        return (f'<div class="lm-t s4 {cls} h300">{_ring(r["ratio"], col, track)}<div class="tag hd"><div class="tt"><b><i>LAB {slot}</i>우수 학회·저널 비중</b><span>최근 5년 논문 중 상위 등급 학회·저널에 실린 비율</span></div></div>'
                 f'<div class="lm-huge {wt} lm-mt">{r["ratio"]:.1f}<u>%</u></div><div class="lm-sub">{sub}</div>'
                 f'<div class="lm-foot"><div class="lm-row"><span>우수 학회·저널 건수</span><b style="font-weight:{700 if wt == "b" else 400}">{r["n_top"]}편</b></div>'
                 f'<div class="lm-ln" style="background:{track}"><i style="width:{r["n_top"] / mx * 100:.0f}%;background:{col}"></i></div></div></div>')
@@ -505,10 +535,10 @@ def sheet_top(m):
         vl = '<div class="lm-empty">우수 학회·저널 논문이 없어요.</div>'
 
     return (big(a, ta, wa, "A", b) + big(b, tb, wb, "B", a)
-            + f'<div class="lm-t s4 out h300"><div class="tag"><span>영향력 등급별 논문 수</span><span>A ◀ ▶ B</span></div>{pyr}</div>'
-            + f'<div class="lm-t s8 sand h280"><div class="tag"><span>연도별 추이 · 2021–2025</span><span class="lm-legend"><span><i class="lm-hatch"></i>전체 논문</span>'
+            + f'<div class="lm-t s4 out h300"><div class="tag hd"><div class="tt"><b>등급별 논문 수</b><span>우수 · 중위권 · 기타로 나눈 편수 (왼쪽 A, 오른쪽 B)</span></div><span>A ◀ ▶ B</span></div>{pyr}</div>'
+            + f'<div class="lm-t s8 sand h280"><div class="tag hd"><div class="tt"><b>연도별 우수 논문</b><span>해마다 낸 전체 논문(빗금) 중 우수 학회·저널 논문(색)</span></div><span class="lm-legend"><span><i class="lm-hatch"></i>전체 논문</span>'
               f'<span><i style="background:{A}"></i>A 우수</span><span><i style="background:{B}"></i>B 우수</span></span></div>{yearly}</div>'
-            + f'<div class="lm-t s4 blk h280"><div class="tag"><span>주요 우수 학회·저널</span><span>A &nbsp;&nbsp;&nbsp;&nbsp; B</span></div>{vl}</div>')
+            + f'<div class="lm-t s4 blk h280"><div class="tag hd"><div class="tt"><b>자주 싣는 우수 학회·저널</b><span>우수 등급 중 논문을 많이 실은 곳</span></div><span>A &nbsp;&nbsp;&nbsp;&nbsp; B</span></div>{vl}</div>')
 
 
 # ================================================================ 02 산학·외부 협업
@@ -521,7 +551,7 @@ def sheet_ind(m):
         dark = _on_dark(cls)
         col = P["ON_" + slot] if dark else P["T" + slot]
         track = rgba(col, .2)
-        return (f'<div class="lm-t s4 {cls} h300"><div class="tag"><span>LAB {slot} · 외부 기관 협업</span></div>'
+        return (f'<div class="lm-t s4 {cls} h300"><div class="tag hd"><div class="tt"><b><i>LAB {slot}</i>외부 기관 협업</b><span>다른 기관 사람과 함께 쓴 논문 비율 (같은 대학 공저자는 제외)</span></div></div>'
                 f'<div class="lm-huge {wt} lm-mt">{r["external_ratio"]:.1f}<u>%</u></div>'
                 f'<div class="lm-sub">{r["external"]} / {r["total"]}편 · 같은 대학 공저자 제외</div>'
                 f'<div class="lm-foot"><div class="lm-row"><span>기업 공저</span><b style="font-weight:{700 if wt == "b" else 400}">{r["industry_ratio"]:.1f}%</b></div>'
@@ -586,10 +616,10 @@ def sheet_ind(m):
         bub = '<div class="lm-empty" style="color:rgba(255,255,255,.6)">함께 쓴 기업이 없어요.</div>'
 
     return (big(a, ta, wa, "A") + big(b, tb, wb, "B")
-            + f'<div class="lm-t s4 out h300"><div class="tag"><span>논문 구성</span><span>100%</span></div><div style="margin-top:26px">{split("A", a, P["TA"])}{split("B", b, P["TB"])}</div>'
+            + f'<div class="lm-t s4 out h300"><div class="tag hd"><div class="tt"><b>논문 구성</b><span>기업 공저 · 기타 외부 기관 · 내부 연구 비율 (합계 100%)</span></div></div><div style="margin-top:26px">{split("A", a, P["TA"])}{split("B", b, P["TB"])}</div>'
               f'<div class="lm-legend" style="margin-top:6px;color:{MU}"><span><i style="background:{INK}"></i>기업</span><span><i style="background:{HA}"></i>기타 외부</span><span><i class="lm-hatch"></i>내부</span></div></div>'
-            + f'<div class="lm-t s7 sand h280"><div class="tag"><span>연도별 기업 공저 비율</span><span class="lm-legend"><span><i style="background:{A}"></i>A</span><span><i style="background:{B}"></i>B</span></span></div>{trend}</div>'
-            + f'<div class="lm-t s5 blk h280"><div class="tag"><span>파트너 기업</span><span>원 크기 = 공저 논문 수</span></div>{bub}</div>')
+            + f'<div class="lm-t s7 sand h280"><div class="tag hd"><div class="tt"><b>연도별 기업 공저 비율</b><span>해마다 기업과 함께 쓴 논문의 비율</span></div><span class="lm-legend"><span><i style="background:{A}"></i>A</span><span><i style="background:{B}"></i>B</span></span></div>{trend}</div>'
+            + f'<div class="lm-t s5 blk h280"><div class="tag hd"><div class="tt"><b>파트너 기업</b><span>함께 논문을 쓴 기업 · 원이 클수록 공저 논문이 많아요</span></div></div>{bub}</div>')
 
 
 # ================================================================ 03 학제 간 융합도
@@ -665,7 +695,7 @@ def sheet_mix(m):
         if w == slot:
             sub += f' · {"B" if slot == "A" else "A"}보다 +{v - other:.1f}%p'
         val = "–" if r["score"] is None else f'{v:.1f}<u>%</u>'
-        return (f'<div class="lm-t s4 {cls} h300"><div class="tag"><span>LAB {slot} · 학제 간 융합도</span></div>'
+        return (f'<div class="lm-t s4 {cls} h300"><div class="tag hd"><div class="tt"><b><i>LAB {slot}</i>학제 간 융합도</b><span>두 개 이상 분야에 걸친 논문의 비율</span></div></div>'
                 f'<div class="lm-huge {wt} lm-mt">{val}</div><div class="lm-sub">{sub}</div>'
                 f'<div class="lm-foot"><div class="lm-row"><span>가장 많이 쓴 분야</span><b style="font-size:20px;font-weight:500">{esc(r["main"] or "정보 없음")}</b></div></div></div>')
 
@@ -674,13 +704,13 @@ def sheet_mix(m):
     warn = [s for s, r in (("A", a), ("B", b)) if r["classified"] < 10 or (r["coverage"] or 0) < 70]
     warn_html = (f'<div class="lm-foot"><span class="lm-chip" style="color:#F2C46D">{"·".join(warn)} 해석 주의 · 분류 논문 10편 미만 또는 분류율 70% 미만</span></div>'
                  if warn else "")
-    trust = (f'<div class="lm-t s4 blk h300"><div class="tag"><span>믿을 만한가</span><span>A &nbsp;&nbsp;&nbsp;&nbsp; B</span></div>'
+    trust = (f'<div class="lm-t s4 blk h300"><div class="tag hd"><div class="tt"><b>데이터 신뢰도</b><span>분야가 분류된 논문 비율 · 분석에 쓴 논문 수</span></div><span>A &nbsp;&nbsp;&nbsp;&nbsp; B</span></div>'
              f'<ul class="lm-vl wide"><li><span>분야 분류율</span><b class="lbA">{fmt(a["coverage"])}</b><b class="lbB">{fmt(b["coverage"])}</b></li>'
              f'<li><span>분석 논문</span><b class="lbA">{a["total"]}</b><b class="lbB">{b["total"]}</b></li></ul>{warn_html}</div>')
 
     def flow(r, slot, c, pid):
         body = _sankey(r["left"], r["right"], c, pid) if r["left"] else '<div class="lm-empty">두 기간 모두 분류된 논문이 있어야 그릴 수 있어요.</div>'
-        return (f'<div class="lm-t s6 sand h280"><div class="tag"><span>LAB {slot} · 연구 분야 변천 (비중 %p)</span><span>2021–23 → 2024–25</span></div>{body}</div>')
+        return (f'<div class="lm-t s6 sand h280"><div class="tag hd"><div class="tt"><b><i>LAB {slot}</i>연구 분야 변천</b><span>2021–23년 → 2024–25년, 분야별 비중(%p)이 어떻게 바뀌었나</span></div></div>{body}</div>')
 
     return big(a, va, ta, wa, "A", vb) + big(b, vb, tb, wb, "B", va) + trust + flow(a, "A", A, "h3a") + flow(b, "B", B, "h3b")
 
@@ -707,15 +737,16 @@ def sheet_size(m):
         icons = _person(col, 1) * shown_s + _person(col, .28) * shown_o + (f'<span class="more">+{more}</span>' if more > 0 else "")
         if not r["active_members"]:
             icons = '<span class="lm-empty">같은 기관 공저자 정보가 없어요</span>'
-        return (f'<div class="lm-t s6 {cls} h300"><div class="tag"><span>LAB {slot} · 함께 쓴 구성원</span><span>{esc(style(r["style"]))}</span></div>'
+        return (f'<div class="lm-t s6 {cls} h300"><div class="tag hd"><div class="tt"><b><i>LAB {slot}</i>함께 쓴 구성원</b><span>교수님과 같은 기관에서 함께 논문을 쓴 사람</span></div><span>{esc(style(r["style"]))}</span></div>'
                 f'<div class="lm-inline"><div class="lm-huge {wt}">{r["active_members"]}<u>명</u></div>'
-                f'<div class="lm-sub">사수 후보 {n_s} · 일반 {n_o}</div></div><div class="lm-ppl">{icons}</div></div>')
+                f'<div class="lm-sub">사수 후보 {n_s} · 일반 {n_o}</div></div><div class="lm-ppl">{icons}</div>'
+                f'<div class="lm-key">{_person(col, 1)}<span>사수 후보 = 교수님과 2편 이상 함께 쓴 사람</span>{_person(col, .28)}<span>일반</span></div></div>')
 
-    avg = (f'<div class="lm-t s4 blk h280"><div class="tag"><span>논문당 평균 저자</span><span>A &nbsp;&nbsp;&nbsp;&nbsp; B</span></div>'
+    avg = (f'<div class="lm-t s4 blk h280"><div class="tag hd"><div class="tt"><b>논문당 평균 저자</b><span>논문 한 편에 이름을 올린 저자 수의 평균</span></div><span>A &nbsp;&nbsp;&nbsp;&nbsp; B</span></div>'
            f'<div style="display:flex;gap:30px;margin-top:40px;align-items:baseline">'
            f'<div class="lm-huge {"b" if a["avg_authors"] >= b["avg_authors"] else "l"} lbA" style="font-size:clamp(56px,6vw,92px)">{a["avg_authors"]:g}</div>'
            f'<div class="lm-huge {"b" if b["avg_authors"] > a["avg_authors"] else "l"} lbB" style="font-size:clamp(56px,6vw,92px)">{b["avg_authors"]:g}</div></div>'
-           f'<div class="lm-sub" style="margin-top:26px;opacity:.55">진한 사람 = 교수님과 2편 이상 함께 쓴 선배</div></div>')
+           f'</div>')
 
     rows = list(a["distribution"].keys())
     mx = max(list(a["distribution"].values()) + list(b["distribution"].values()) + [1])
@@ -730,7 +761,7 @@ def sheet_size(m):
               f'<text x="400" y="{y + 25}" text-anchor="middle" font-size="13" font-weight="600">{esc(n)}</text>'
               f'<text x="{344 - wa_:.1f}" y="{y + 28}" text-anchor="end" font-family="Space Grotesk" font-size="22" font-weight="{700 if va >= vb else 300}" fill="{P["TA"]}">{va}</text>'
               f'<text x="{456 + wb_:.1f}" y="{y + 28}" font-family="Space Grotesk" font-size="22" font-weight="{700 if vb >= va else 300}" fill="{P["TB"]}">{vb}</text>')
-    dist = (f'<div class="lm-t s8 out h280"><div class="tag"><span>한 논문에 몇 명이 쓰나</span><span>A ◀ 논문 수 ▶ B</span></div>'
+    dist = (f'<div class="lm-t s8 out h280"><div class="tag hd"><div class="tt"><b>한 논문에 몇 명이 쓰나</b><span>저자 수 구간별 논문 편수 (왼쪽 A, 오른쪽 B)</span></div><span>A ◀ 논문 수 ▶ B</span></div>'
             f'<svg width="100%" viewBox="0 0 800 210" style="margin-top:16px">{s}</svg></div>')
     return big(a, ta, wa, "A") + big(b, tb, wb, "B") + avg + dist
 
@@ -748,8 +779,6 @@ def sheet_cont(m):
         dark = _on_dark(cls)
         col = P["ON_" + slot] if dark else P["T" + slot]
         empty = rgba(col, .1 if dark else .13)
-        on, c_on, label = SIG[r["signal"]]
-        dots = "".join(f'<i class="{"on" if i == on else ""}" style="{"background:" + c_on if i == on else ""}"></i>' for i in range(3))
         peak = max(r["by_month"].values()) or 1
         cells = ""
         for y in YEARS:
@@ -761,7 +790,7 @@ def sheet_cont(m):
         months = round(r["active_month_ratio"] * 60 / 100)
         gaps = ", ".join(map(str, r["gap_years"])) if r["gap_years"] else "없음"
         trend = f'{r["trend"]}배' if r["trend"] is not None else "판정 불가"
-        return (f'<div class="lm-t s6 {cls}"><div class="tag"><span>LAB {slot} · 논문이 나온 달</span><span class="lm-sig" style="color:{col}">{dots}{label}</span></div>'
+        return (f'<div class="lm-t s6 {cls}"><div class="tag hd"><div class="tt"><b><i>LAB {slot}</i>논문이 나온 달</b><span>최근 60개월을 한 칸씩 · 진할수록 그 달 논문이 많아요</span></div></div>'
                 f'<div class="lm-inline"><div class="lm-huge {wt}">{r["active_month_ratio"]:.0f}<u>%</u></div>'
                 f'<div class="lm-sub">60개월 중 {months}개월 · 공백 연도 {gaps} · 최근 {trend}</div></div><div class="lm-grass">{cells}</div></div>')
 
@@ -782,10 +811,33 @@ def sheet_cont(m):
         s += "".join(f'<circle cx="{x(i)}" cy="{y(v):.1f}" r="6" fill="{P['SAND']}" stroke="{c}" stroke-width="3"/>' for i, v in enumerate(d))
         s += f'<text x="{x(4) + 16}" y="{y(d[4]) + 8:.1f}" font-family="Space Grotesk" font-size="26" font-weight="{wt}" fill="{P["TA"] if r is a else P["TB"]}">{d[4]}편</text>'
     s += "".join(f'<text x="{x(i)}" y="194" text-anchor="middle" font-family="IBM Plex Mono" font-size="12">{yy}</text>' for i, yy in enumerate(YEARS))
-    line = (f'<div class="lm-t s12 sand"><div class="tag"><span>연도별 논문 수</span><span class="lm-legend"><span><i style="background:{A}"></i>A</span>'
+    line = (f'<div class="lm-t s12 sand"><div class="tag hd"><div class="tt"><b>연도별 논문 수</b><span>해마다 낸 논문 수 · 빗금은 논문이 없던 해</span></div><span class="lm-legend"><span><i style="background:{A}"></i>A</span>'
             f'<span><i style="background:{B}"></i>B</span><span><i class="lm-hatch"></i>공백 연도</span></span></div>'
             f'<svg width="100%" viewBox="0 0 1240 200" style="margin-top:12px">{s}</svg></div>')
-    return big(a, ta, wa, "A") + big(b, tb, wb, "B") + line
+    return lights(a, b) + big(a, ta, wa, "A") + big(b, tb, wb, "B") + line
+
+
+LAMPS = (("red", "#E5484D"), ("yellow", "#F5B83D"), ("green", "#3DBE6B"))
+SIG_TEXT = {"green": ("꾸준함", "5년 내내 논문이 나왔고 최근에도 페이스가 유지돼요"),
+            "yellow": ("주의", "공백 연도가 1년 있거나 최근 논문 수가 줄었어요"),
+            "red": ("공백 많음", "논문이 나오지 않은 해가 2년 이상이에요")}
+
+
+def lights(a, b):
+    """지표 5의 핵심: 연구실별 신호등 (빨강·노랑·초록 중 하나에 불이 켜짐)"""
+    def one(slot, r):
+        sig = r["signal"]
+        lamps = "".join(f'<i class="{"on" if k == sig else ""}" style="--c:{c}"></i>' for k, c in LAMPS)
+        name, why = SIG_TEXT[sig]
+        c_on = dict(LAMPS)[sig]
+        return (f'<div class="lm-light"><span class="sl">LAB {slot}</span><span class="box">{lamps}</span>'
+                f'<div><b style="color:{c_on}">{name}</b><p>{why}</p></div></div>')
+    return (f'<div class="lm-t s12 blk">{H5("꾸준함 신호등", "공백 연도와 최근 논문 추세로 매긴 신호 · 초록 꾸준함 / 노랑 주의 / 빨강 공백 많음")}'
+            f'<div class="lm-lights">{one("A", a)}{one("B", b)}</div></div>')
+
+
+def H5(t, d):
+    return f'<div class="tag hd"><div class="tt"><b>{t}</b><span>{d}</span></div></div>'
 
 
 def _fold_bg(i):
@@ -805,11 +857,11 @@ def folders_html(order, m, chosen, title):
         ab = (f'<b style="color:var(--tinA)">{va}</b><s style="color:var(--tinB)">{vb}</s>' if w == "A" else
               f'<s style="color:var(--tinA)">{va}</s><b style="color:var(--tinB)">{vb}</b>' if w == "B" else
               f'<span style="color:var(--tinA)">{va}</span><span style="color:var(--tinB)">{vb}</span>')
-        star = '<span class="lm-hd"><span class="star">내 기준</span></span>' if q["key"] in chosen else ""
+        star = '<span class="mine">★ 내 기준</span>' if q["key"] in chosen else "<span></span>"
         parts.append(
-            f'<details class="lm-fold" name="lmfold"{" open" if i == 0 else ""} style="--i:{i};background:{_fold_bg(i)}">'
+            f'<details class="lm-fold" name="lmfold"{" open" if i == 0 else ""} style="--i:{i};--fbg:{_fold_bg(i)}">'
             f'<summary><span class="lm-ftab">{q["no"]}<b>{esc(q["chip"])}</b></span><span class="no">{q["no"]}</span>'
-            f'<span class="q">{esc(q["q"])} {star}</span><span class="ab">{ab}</span><span class="chev">↓</span></summary>'
+            f'<span class="q">{esc(q["q"])}</span><span class="ab">{ab}</span>{star}<span class="chev">↓</span></summary>'
             f'<div class="lm-fbody"><div class="lm-g">{SHEETS[q["key"]](m)}</div>'
             f'<div class="lm-slidefoot"><span>LABMATCH</span><span>{esc(title)}</span><span>{i + 1:02d} / {len(order):02d}</span></div></div></details>')
     return (f'<div class="lm"><p class="lm-hint2">장을 누르면 펼쳐져요. 한 번에 한 장씩 열려요.</p>'

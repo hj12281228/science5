@@ -276,10 +276,10 @@ def build_txt_report(data_a, data_b, summaries, q_a, q_b):
 st.set_page_config(page_title="LABMATCH", layout="wide")
 st.markdown(
     """<style>
-    /* 비교 화면 버튼: 팀 공통 톤 (A 주황) */
+    /* 비교 화면 버튼: 팀 공통 톤 (A 세이지) */
     div.stButton > button[kind="primary"] * { color:#141414; }
-    div.stButton > button[kind="primary"] { background:#F24F0B; border-color:#F24F0B; color:#141414; }
-    div.stButton > button[kind="primary"]:hover { background:#D9440A; border-color:#D9440A; color:#141414; }
+    div.stButton > button[kind="primary"] { background:#93BAB5; border-color:#93BAB5; color:#141414; }
+    div.stButton > button[kind="primary"]:hover { background:#7FA9A3; border-color:#7FA9A3; color:#141414; }
     </style>""",
     unsafe_allow_html=True
 )
@@ -321,8 +321,37 @@ def _fill_yonsei_works(person):
     except Exception:
         return person
     if hit:
-        person = {**person, "works": hit.get("works_count") or 0, "works_label": "전체 논문"}
+        person = {**person, "works": hit.get("works_count") or 0, "works_label": "전체 논문",
+                  "tags": person.get("tags") or [SUBFIELD_KO.get(t, t) for t in hit.get("tags", [])]}
     return person
+
+
+_PROFILE_CACHE = {}  # 영문 이름 → {"works", "tags"} (성공한 것만 저장, 실패하면 다음 접속 때 다시 시도)
+
+
+def _yonsei_profile(eng):
+    """연세대 교수님 한 분의 OpenAlex 전체 논문 수와 주요 연구 분야(세부 분야 최대 3개)"""
+    if eng in _PROFILE_CACHE:
+        return _PROFILE_CACHE[eng]
+    hit = next((c for c in search_author_candidates(eng) if "Yonsei" in (c.get("institution") or "")), None)
+    prof = {"works": hit.get("works_count") or 0, "tags": [SUBFIELD_KO.get(t, t) for t in hit.get("tags", [])]} if hit else {}
+    _PROFILE_CACHE[eng] = prof
+    return prof
+
+
+def yonsei_profiles(db_tree):
+    """학과 둘러보기 카드에 붙일 연구 분야·논문 수. 사용량 한도(429)에 걸리면 받은 만큼만 씀"""
+    out = {}
+    for depts in db_tree.values():
+        for profs in depts.values():
+            for p in profs:
+                if not p.get("eng"):
+                    continue
+                try:
+                    out[p["name"]] = _yonsei_profile(p["eng"])
+                except Exception:
+                    return out  # 한도에 걸렸으면 나머지는 다음에
+    return out
 
 
 def _candidates_for(person):
@@ -340,7 +369,8 @@ def _candidates_for(person):
 
 if st.session_state.step == 1:
     event = render_home(
-        PROF_DB_TREE, st.session_state.home_slots, st.session_state.home_search, st.session_state.home_notice
+        PROF_DB_TREE, st.session_state.home_slots, st.session_state.home_search, st.session_state.home_notice,
+        profiles=yonsei_profiles(PROF_DB_TREE),
     )
 
     # 같은 이벤트가 다시 실행될 때 두 번 처리하지 않도록 t(시각)로 구분
