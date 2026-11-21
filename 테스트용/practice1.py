@@ -133,7 +133,7 @@ def _pyramid(r, color):
         return f"<div style='font-size:13px;color:{MUTE}'>등급별 정보 없음 · 수집 예정</div>"
     levels = [(1, r["n_top"], color, "#fff"), (2, r["n_mid"], "#D5D9E0", TEXT),
               (3, r["n_oth"], "#EEF0F3", "#4b5563")]
-    edges = [40, 60, 80, 100]          # 층별 윗변·아랫변 너비(%)
+    edges = [40, 60, 80, 100]
     html = []
     for i, (tier, n, bg, fg) in enumerate(levels):
         top, bottom = (100 - edges[i]) / 2, (100 - edges[i + 1]) / 2
@@ -306,16 +306,16 @@ def render_toptier(lab_a, lab_b):
     else:
         st.info("논문 목록이 없어 연도별·학회별 그래프는 수집 예정이에요.")
 
-    # 3줄 Visual Brief 및 최종 리포트용 요약 문장 & 격차 점수 반환
+    # 최종 리포트(STEP 4) 연동용 한 줄 요약 & 격차 점수 반환
     rat_a, rat_b = _ratio(ra) or 0.0, _ratio(rb) or 0.0
     diff_score = round(abs(rat_a - rat_b), 1)
     if diff_score < 5.0:
-        summary = f"두 연구실 모두 우수 학회·저널 비중이 {rat_a:.1f}% vs {rat_b:.1f}%로 연구 성과 밀도가 비슷해요."
+        summary = f"두 연구실 모두 우수 학회·저널 비중이 {rat_a:.1f}% vs {rat_b:.1f}%로 학술 성과 밀도가 비슷합니다."
     else:
         more, less = (ra, rb) if rat_a > rat_b else (rb, ra)
         more_rat, less_rat = max(rat_a, rat_b), min(rat_a, rat_b)
         summary = (f"{more['lab_name']}은 우수 학회·저널 비중이 {more_rat:.1f}%({more['n_top']}편)로 "
-                   f"{less['lab_name']}({less_rat:.1f}%)보다 {diff_score:.1f}%p 높아 고임팩트 성과 밀도가 높아요.")
+                   f"{less['lab_name']}({less_rat:.1f}%)보다 {diff_score:.1f}%p 높아 고임팩트 성과 밀도가 높습니다.")
 
     return {"lab_a": ra, "lab_b": rb, "summary": summary, "diff_score": diff_score}
 
@@ -324,4 +324,4 @@ if __name__ == "__main__":
     st.set_page_config(page_title="우수 학회·저널 논문 비중 및 건수", layout="wide")
     data = json.loads(MOCK_PATH.read_text(encoding="utf-8"))
     result = render_toptier(data["lab_A"], data["lab_B"])
-    st.caption("3줄 Brief용 요약: " + result["summary"])
+    st.caption("최종 리포트용 요약: " + result["summary"])
