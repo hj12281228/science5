@@ -8,12 +8,8 @@ import streamlit as st
 from home_page import render_home
 from build_home_snapshot import SUBFIELD_KO
 
-# 조원들이 만든 5개의 지표 함수 불러오기
-from practice1 import render_toptier
-from practice2 import render_industry_collab
-from practice3 import render_interdisciplinarity
-from practice4 import render_lab_size
-from practice5 import render_continuity
+# 조원들이 만든 5개의 지표 화면은 compare_page에서 불러옵니다.
+from compare_page import render_confirm, render_compare
 
 # =========================================================
 # [데이터베이스] 연세대학교 교수진 DB 자동 생성 및 로드
@@ -280,10 +276,9 @@ def build_txt_report(data_a, data_b, summaries, q_a, q_b):
 st.set_page_config(page_title="LABMATCH", layout="wide")
 st.markdown(
     """<style>
-    .stTextInput label p { font-size: 18px !important; font-weight: bold !important; }
-    .stTextInput input { font-size: 20px !important; height: 55px !important; }
-    div.stButton > button, div.stDownloadButton > button { background-color: #F8FAFC !important; height: 54px !important; border-radius: 8px !important; }
-    div.stButton > button *, div.stDownloadButton > button * { color: #000000 !important; font-size: 17px !important; font-weight: 800 !important; }
+    /* 비교 화면 버튼: 팀 공통 톤 (A 남색) */
+    div.stButton > button[kind="primary"] { background:#3D5A80; border-color:#3D5A80; }
+    div.stButton > button[kind="primary"]:hover { background:#2F4867; border-color:#2F4867; }
     </style>""",
     unsafe_allow_html=True
 )
@@ -307,43 +302,6 @@ if "home_last_event" not in st.session_state:
     st.session_state.home_last_event = None
 if "home_notice" not in st.session_state:
     st.session_state.home_notice = None
-
-# =========================================================
-# [공통 상단 바] 3개의 팝업 메뉴 (11/25 수정 사항 반영)
-# =========================================================
-# 첫 화면에서는 컴포넌트 안의 '이용 안내' 팝업으로 대신합니다.
-if st.session_state.step != 1:
-    top_spacer, top_btn1, top_btn2, top_btn3 = st.columns([4.5, 1.9, 1.9, 1.7])
-    with top_btn1:
-        with st.popover("📊 5대 체감 지표 안내", use_container_width=True):
-            st.markdown(
-                "| 지표명 | 이용자 관점 질문 | 기준 및 시각화 안내 |\n"
-                "|---|---|---|\n"
-                "| **1. 우수 학회·저널 비중** | 주요 학회·저널 게재 빈도 | 2021~2025년 · 도넛 차트 + 피라미드 |\n"
-                "| **2. 산학·외부 협업 비율** | 기업 과제 or 학술 연구 중심? | 2021~2025년 · 타 기관·기업 공저 및 랩 주도 비율 |\n"
-                "| **3. 학제 간 융합도** | 타 전공 출신 적응 가능성 |2021-2023 vs 2024-2025 · 생키 다이어그램 |\n"
-                "| **4. 연구실 규모·사수** | 질문할 사수·동료 규모 | 진한 아이콘(사수 후보) + 연한 아이콘(일반 구성원) |\n"
-                "| **5. 연구 산출 연속성** | 논문이 꾸준히 나오는가? | 2021~2025년 · 신호등 배지 + 월별 잔디 달력 |"
-            )
-    with top_btn2:
-        with st.popover("⚠️ 분석 시 주의 사항", use_container_width=True):
-            st.markdown(
-                "- **저자 식별:** 글로벌 DB 특성상 동명이인이 혼재하여 소속 기관 교차 검증 단계를 거칩니다.\n"
-                "- **영문 원칙:** 영문 검색이 원칙이나, 연세대 DB에 등록된 교수진은 한글 자동 매핑을 지원합니다.\n"
-                "- **분석 범위:** 쾌적한 시연을 위해 최근 논문 100편(핵심 지표는 2021~2025년 기준)으로 제한했습니다."
-            )
-    with top_btn3:
-        with st.popover("🦅 연세대 연구자 리스트", use_container_width=True):
-            st.markdown("**[📌 단과대 및 학과별 명단 검색]**")
-            col_c, col_d = st.columns(2)
-            with col_c:
-                selected_college = st.selectbox("단과대학 선택", list(PROF_DB_TREE.keys()))
-            with col_d:
-                selected_dept = st.selectbox("학과 선택", list(PROF_DB_TREE[selected_college].keys()))
-            st.divider()
-            st.markdown(f"**💡 {selected_dept} 교수진** (클릭 시 이름 복사 가능)")
-            for prof in PROF_DB_TREE[selected_college][selected_dept]:
-                st.code(f"{prof['name']} ({prof['eng']})", language="text")
 
 # =========================================================
 # [STEP 1] 첫 화면: 이름 검색 + A·B 비교함 + 학과·분야 둘러보기
@@ -437,191 +395,68 @@ if st.session_state.step == 1:
                 st.rerun()
 
 # =========================================================
-# [STEP 2] 동명이인 걸러내기
+# [STEP 2] 본인 확인 (동명이인)  /  [STEP 3] 비교
 # =========================================================
-elif st.session_state.step == 2:
-    st.title("🔎 정확한 교수님을 선택해 주세요 (동명이인 방지)")
-    st.caption("OpenAlex DB에서 검색된 학자들입니다. 소속 대학을 확인하고 올바른 교수님을 선택하세요.")
+def _go_home(slot):
+    """상단 바의 '바꾸기': 그 칸만 비우고 첫 화면으로 (None이면 둘 다 유지)"""
+    if slot:
+        slots = dict(st.session_state.home_slots)
+        slots[slot] = None
+        st.session_state.home_slots = slots
+    st.session_state.home_notice = None
+    st.session_state.step = 1
+    st.rerun()
 
-    col1, col2 = st.columns(2)
-    with col1:
-        st.subheader(f"1️⃣ '{st.session_state.query_a}' 검색 결과")
-        if not st.session_state.cands_a:
-            st.error("💡 **검색 결과가 없습니다.** 영문 스펠링을 확인 후 다시 입력해 보세요.")
-            sel_a = None
-        else:
-            options_a = {c["id"]: f"{c['name']} (소속: {c['institution']} / 논문 {c['works_count']}편)" for c in st.session_state.cands_a}
-            sel_a = st.radio("교수님을 선택하세요:", options=list(options_a.keys()), format_func=lambda x: options_a[x])
 
-    with col2:
-        st.subheader(f"2️⃣ '{st.session_state.query_b}' 검색 결과")
-        if not st.session_state.cands_b:
-            st.error("💡 **검색 결과가 없습니다.** 영문 스펠링을 확인 후 다시 입력해 보세요.")
-            sel_b = None
-        else:
-            options_b = {c["id"]: f"{c['name']} (소속: {c['institution']} / 논문 {c['works_count']}편)" for c in st.session_state.cands_b}
-            sel_b = st.radio("교수님을 선택하세요:", options=list(options_b.keys()), format_func=lambda x: options_b[x], key="radio_b")
+def _with_tags_ko(cands):
+    return [{**c, "tags_ko": [SUBFIELD_KO.get(t, t) for t in c.get("tags", [])]} for c in cands]
 
-    st.divider()
-    btn_prev, btn_next = st.columns(2)
-    with btn_prev:
-        if st.button("⬅️ 다시 검색하기", use_container_width=True):
-            st.session_state.step = 1
-            st.rerun()
-    with btn_next:
-        if st.button("🚀 선택한 교수님으로 지표 분석 시작", use_container_width=True):
-            if sel_a and sel_b:
-                name_a = [c["name"] for c in st.session_state.cands_a if c["id"] == sel_a][0]
-                name_b = [c["name"] for c in st.session_state.cands_b if c["id"] == sel_b][0]
-                try:
-                    with st.spinner("선택하신 교수님의 최근 100편 논문을 수집해 분석 중입니다..."):
-                        st.session_state.data_a = fetch_openalex_lab_data_by_id(sel_a, name_a)
-                        st.session_state.data_b = fetch_openalex_lab_data_by_id(sel_b, name_b)
-                except Exception:
-                    st.error("OpenAlex에서 논문을 불러오지 못했습니다. 잠시 후 다시 시도하세요.")
-                else:
-                    st.session_state.step = 3
-                    st.rerun()
 
-# =========================================================
-# [STEP 3] 5대 핵심 체감 지표 분석 (한 줄 요약 자동 수집)
-# =========================================================
-elif st.session_state.step == 3:
-    data_a, data_b = st.session_state.data_a, st.session_state.data_b
-    st.title("📊 5대 핵심 체감 지표 비교")
+def _research(slot, query):
+    query = (query or "").strip()
+    if not query:
+        return
+    try:
+        st.session_state["cands_" + slot.lower()] = _yonsei_first(search_author_candidates(query))
+    except Exception:
+        st.warning("지금은 OpenAlex 검색이 되지 않아요. 잠시 후 다시 시도하세요.")
+        return
+    st.rerun()
 
-    tab1, tab2, tab3, tab4, tab5 = st.tabs([
-        "① 우수 학회·저널 비중",
-        "② 산학·외부 협업 비율",
-        "③ 학제 간 융합도",
-        "④ 연구실 규모·사수",
-        "⑤ 연구 산출 연속성"
-    ])
 
-    with tab1:
-        try:
-            res_1 = render_toptier(data_a, data_b)
-            if isinstance(res_1, dict) and res_1.get("summary"):
-                st.session_state.summary_1 = res_1["summary"]
-            elif isinstance(res_1, dict) and "lab_a" in res_1:
-                st.session_state.summary_1 = (
-                    f"{data_a['professor']} 연구실 {res_1['lab_a']['n_top']}편 vs "
-                    f"{data_b['professor']} 연구실 {res_1['lab_b']['n_top']}편 게재 (2021~2025년 기준)."
-                )
-        except Exception as e:
-            st.error(f"지표 1 오류: {e}")
-
-    with tab2:
-        try:
-            res_2 = render_industry_collab(data_a, data_b)
-            if isinstance(res_2, dict) and res_2.get("summary"):
-                st.session_state.summary_2 = res_2["summary"]
-            else:
-                st.session_state.summary_2 = "2021~2025년 기준 타 기관·기업 공저 및 연구실 주도 산학 비율 비교 완료."
-        except Exception as e:
-            st.error(f"지표 2 오류: {e}")
-
-    with tab3:
-        try:
-            res_3 = render_interdisciplinarity({"lab_A": data_a, "lab_B": data_b})
-            if isinstance(res_3, dict) and res_3.get("summary"):
-                st.session_state.summary_3 = res_3["summary"]
-            else:
-                st.session_state.summary_3 = "초기 3년(2021-2023) 대비 최근 2년(2024-2025) 연구 분야 비중 변화 분석 완료."
-        except Exception as e:
-            st.error(f"지표 3 오류: {e}")
-
-    with tab4:
-        try:
-            res_4 = render_lab_size(data_a, data_b)
-            if isinstance(res_4, dict) and res_4.get("summary"):
-                st.session_state.summary_4 = res_4["summary"]
-            else:
-                st.session_state.summary_4 = "교수와 2편 이상 공저한 사수 후보 및 일반 구성원 규모·협업 스타일 비교 완료."
-        except Exception as e:
-            st.error(f"지표 4 오류: {e}")
-
-    with tab5:
-        try:
-            res_5 = render_continuity([data_a, data_b])
-            if isinstance(res_5, dict) and res_5.get("summary"):
-                st.session_state.summary_5 = res_5["summary"]
-            else:
-                st.session_state.summary_5 = "2021~2025년 공백 연도 유무 및 최근 2년 산출 추세 신호등 판정 완료."
-        except Exception as e:
-            st.error(f"지표 5 오류: {e}")
-
-    st.divider()
-    col_prev, col_next = st.columns(2)
-    with col_prev:
-        if st.button("⬅️ 동명이인 선택으로 돌아가기", use_container_width=True):
-            st.session_state.step = 2
-            st.rerun()
-    with col_next:
-        if st.button("📌 최종 A4 요약 리포트 다운로드 ➡️", use_container_width=True):
-            st.session_state.step = 4
-            st.rerun()
-
-# =========================================================
-# [STEP 4] A4 1페이지 요약 리포트 다운로드 (TXT 전용)
-# =========================================================
-elif st.session_state.step == 4:
-    st.title("📌 랩매치 최종 비교 리포트")
-    data_a, data_b = st.session_state.data_a, st.session_state.data_b
-    prof_a, prof_b = data_a["professor"], data_b["professor"]
-    st.caption(f"분석 대상: **{prof_a} 연구실** vs **{prof_b} 연구실** (OpenAlex 2021~2025년 기준)")
-    st.divider()
-
-    summaries = [
-        st.session_state.summary_1 or "우수 학회·저널 비중 데이터 산출 완료.",
-        st.session_state.summary_2 or "산학·외부 협업 비율 데이터 산출 완료.",
-        st.session_state.summary_3 or "초기 3년(2021~2023) 대비 최근 2년(2024~2025) 분야 비중 변화 분석 완료.",
-        st.session_state.summary_4 or "사수 후보(2편 이상 공저) 및 일반 구성원 규모 비교 완료.",
-        st.session_state.summary_5 or "2021~2025년 공백 연도 및 산출 추세 판정 완료."
-    ]
-
-    # 1. 5대 핵심 지표 한 줄 요약
-    st.subheader("📊 1. 5대 핵심 지표 한 줄 요약")
-    with st.container(border=True):
-        st.markdown(f"- **① 우수 학회·저널 비중:** {summaries[0]}")
-        st.markdown(f"- **② 산학·외부 협업 비율:** {summaries[1]}")
-        st.markdown(f"- **③ 학제 간 융합도:** {summaries[2]}")
-        st.markdown(f"- **④ 연구실 규모·사수:** {summaries[3]}")
-        st.markdown(f"- **⑤ 연구 산출 연속성:** {summaries[4]}")
-
-    # 2. 면담 가이드 (접기/펼치기 + 원클릭 복사 UI)
-    q_a = "최근 발표된 논문과 협업 실적이 인상적입니다. 신입생 합류 시 기존 과제 배정과 1저자 연구 기회가 어떻게 주어지는지 궁금합니다."
-    q_b = "연구실의 산출 흐름과 구성원 협업 구조가 궁금합니다. 신입생이 적응할 때 사수(선배) 멘토링이나 세미나가 어떻게 운영되는지 여쭤보고 싶습니다."
-
-    with st.expander("🗣️ 교수님 면담 시 활용할 추천 질문 보기 (클릭 시 원클릭 복사)", expanded=False):
-        q_col1, q_col2 = st.columns(2)
-        with q_col1:
-            st.markdown(f"**{prof_a} 교수님께**")
-            st.code(q_a, language=None)
-        with q_col2:
-            st.markdown(f"**{prof_b} 교수님께**")
-            st.code(q_b, language=None)
-
-    st.divider()
-
-    # 3. A4 1페이지 TXT 리포트 미리보기 및 다운로드
-    st.subheader("💾 2. 최종 비교 리포트 내보내기 (TXT)")
-    st.caption("실시간 수집 통계, 5대 지표 한 줄 요약, 면담 가이드 및 컨택 전 체크리스트를 A4 1페이지 분량의 TXT 파일로 저장합니다.")
-
-    txt_data = build_txt_report(data_a, data_b, summaries, q_a, q_b)
-
-    with st.expander("📄 다운로드될 TXT 리포트 내용 미리보기", expanded=False):
-        st.text(txt_data)
-
-    st.download_button(
-        label="📥 TXT 종합 분석 리포트 다운로드",
-        data=txt_data.encode("utf-8"),
-        file_name=f"LABMATCH_{prof_a}_vs_{prof_b}.txt",
-        mime="text/plain",
-        use_container_width=True
+if st.session_state.step == 2:
+    slots = st.session_state.home_slots
+    picked = render_confirm(
+        slots,
+        {"A": _with_tags_ko(st.session_state.cands_a), "B": _with_tags_ko(st.session_state.cands_b)},
+        _go_home, _research,
     )
+    st.write("")
+    ready = picked.get("A") and picked.get("B")
+    if st.button("이 두 분으로 비교하기", type="primary", use_container_width=True, disabled=not ready):
+        try:
+            with st.status("연구실 논문을 모으고 있어요", expanded=True) as status:
+                new_slots = dict(slots)
+                for slot, cands, key in (("A", st.session_state.cands_a, "data_a"), ("B", st.session_state.cands_b, "data_b")):
+                    c = next(x for x in cands if x["id"] == picked[slot])
+                    person = slots.get(slot) or {}
+                    name = person.get("name") or c["name"]
+                    st.write(f"LAB {slot} {name} 교수님 최근 논문 100편 불러오는 중")
+                    st.session_state[key] = fetch_openalex_lab_data_by_id(c["id"], name)
+                    new_slots[slot] = {**person, "oa_id": c["id"], "inst": c.get("institution")}
+                st.write("다섯 가지 지표 계산 중")
+                status.update(label="준비됐어요", state="complete")
+            st.session_state.home_slots = new_slots
+            st.session_state.step = 3
+            st.rerun()
+        except Exception:
+            st.error("OpenAlex에서 논문을 불러오지 못했어요. 잠시 후 다시 시도하세요.")
 
-    st.divider()
-    if st.button("⬅️ 지표 화면으로 돌아가기", use_container_width=True):
-        st.session_state.step = 3
+elif st.session_state.step >= 3:
+    if not (st.session_state.data_a and st.session_state.data_b):
+        st.session_state.step = 1
         st.rerun()
+    render_compare(
+        st.session_state.home_slots, st.session_state.data_a, st.session_state.data_b,
+        _go_home, build_txt_report, demo=st.session_state.get("lmc_demo", False),
+    )
