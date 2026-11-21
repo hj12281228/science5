@@ -6,6 +6,7 @@ LABMATCH 첫 화면 (검색 + A·B 비교함 + 연세대 학과 둘러보기 + �
   (OpenAlex 사용량 한도 때문에 첫 화면에서 실시간으로 부르지 않습니다.)
 """
 
+import base64
 import json
 from pathlib import Path
 
@@ -14,6 +15,7 @@ import streamlit as st
 HERE = Path(__file__).parent
 COMP_DIR = HERE / "home_component"
 SNAPSHOT_PATH = HERE / "home_fields.json"
+LOGO_DIR = COMP_DIR / "logos"
 
 
 @st.cache_resource(show_spinner=False)
@@ -32,6 +34,15 @@ def load_field_snapshot():
         return json.loads(SNAPSHOT_PATH.read_text(encoding="utf-8"))
     except Exception:
         return None
+
+
+@st.cache_data(show_spinner=False)
+def load_logos():
+    """home_component/logos/학교이름.webp → {"연세대": "data:image/webp;base64,..."} (파일이 없는 학교는 글자 배지로 표시)"""
+    out = {}
+    for f in sorted(LOGO_DIR.glob("*.webp")):
+        out[f.stem] = "data:image/webp;base64," + base64.b64encode(f.read_bytes()).decode()
+    return out
 
 
 def yonsei_list(db_tree):
@@ -54,6 +65,7 @@ def render_home(db_tree, slots, search, notice=None):
             "fields": load_field_snapshot(),
             "search": search,
             "notice": notice,
+            "logos": load_logos(),
         },
         key="labmatch_home",
         on_event_change=lambda: None,
