@@ -193,7 +193,7 @@ def render_interdisciplinarity(data):
     """전달받은 JSON 데이터로 현재 Streamlit 화면에 지표를 그린다."""
     import streamlit as st
 
-    st.header("학제 간 융합도")
+    st.subheader("3. 학제 간 융합도")
     try:
         data = _normalize_data(data)
         _validate_normalized(data)
@@ -204,30 +204,24 @@ def render_interdisciplinarity(data):
     source = data["source"]
     if source["kind"] == "mock":
         st.warning(f"가상 데이터 데모 · {source['name']}")
-        st.caption("화면의 수치와 그래프는 가상 논문 표본만으로 계산한 데모 결과입니다.")
+        source_note = "화면 수치·그래프는 가상 논문 표본 기반 데모 결과"
     else:
-        source_label = f"{source['name']} 공개 데이터"
-        if source.get("retrieved_at"):
-            source_label += f" · 수집일 {source['retrieved_at']}"
-        st.info(source_label)
-        st.caption("공개 출처에서 수집한 논문의 분야 분류를 바탕으로 수치와 그래프를 계산했습니다.")
-    st.caption(f"분야 분류 기준 · {source['taxonomy']}")
-    st.caption("융합도 = 2개 이상 분야로 분류된 논문 수 ÷ 분야 분류가 있는 논문 수 × 100")
+        source_note = "공개 출처에서 수집한 논문의 분야 분류를 바탕으로 수치·그래프 계산"
 
-    years = sorted({p["year"] for lab in data["labs"] for p in lab["papers"] if p["year"] >= 5})
-    if not years:
-        st.info("비교 기간을 설정할 수 있는 논문 자료가 없어 융합도를 산출할 수 없습니다.")
-        return
-
-    end = st.selectbox("비교 기준연도", years, index=len(years) - 1, key="labmatch_interdisciplinarity_year")
+    # 팀 공통 기준: 2021-2025년(최근 완전 연도 5년)
+    end = 2025
     
     # [버그 수정] Streamlit 취소선 방지를 위해 물결표(~)를 하이픈(-)으로 교체
     past_label = f"{end - 4}-{end - 2}"
     recent_label = f"{end - 1}-{end}"
-    st.caption(
-        f"최근 5개 연도({end - 4}-{end})를 초기 3년({past_label})과 "
-        f"최근 2년({recent_label})으로 나눠 기간별 분야 비중을 비교합니다."
-    )
+    st.caption(f"{source_note} · {end - 4}-{end}")
+    with st.expander("계산 기준 및 분석 방법"):
+        st.caption("  \n".join([
+            f"분야 분류 기준 · {source['taxonomy']}",
+            "융합도 = 2개 이상 분야로 분류된 논문 수 ÷ 분야 분류가 있는 논문 수 × 100",
+            f"최근 5개 연도({end - 4}-{end})를 초기 3년({past_label})과 "
+            f"최근 2년({recent_label})으로 구분해 기간별 분야 비중 비교",
+        ]))
 
     for lab in data["labs"]:
         papers = [p for p in lab["papers"] if end - 4 <= p["year"] <= end]
@@ -263,9 +257,9 @@ def render_interdisciplinarity(data):
                 key=f"labmatch_interdisciplinarity_sankey_{lab['id']}",
             )
             st.caption(
-                "띠의 두께는 분야 비중(%p)입니다. 같은 분야는 두 기간에 공통으로 "
-                "차지한 비중을 연결하고, 나머지는 증가분·감소분으로 표시합니다. "
-                "논문이나 연구자의 분야 이동은 이 자료로 확인할 수 없습니다."
+                "띠 두께 = 분야 비중(%p). 같은 분야의 두 기간 공통 비중 연결, "
+                "나머지는 증가분·감소분으로 표시. "
+                "논문·연구자의 실제 분야 이동을 의미하지 않음"
             )
         else:
             st.info("두 기간에 각각 분류 논문이 있어야 생키를 표시할 수 있습니다.")
@@ -282,11 +276,11 @@ def render_interdisciplinarity(data):
             ])
 
     st.caption(
-        "분야 비중은 논문 1편을 해당 분야 수로 균등 분배해 계산합니다. "
-        "분류율은 분석에 사용한 논문 중 분야가 붙은 비율입니다. "
-        "연구실 전체 논문의 수집률과 분류 정확도는 별도 확인이 필요합니다. "
-        "수집 누락, 저자·연구실 식별 오류, 분야 분류 기준에 따라 결과가 달라질 수 있으며 "
-        "타전공자의 적응 가능성은 이 지표로 판단하기 어렵습니다."
+        "분야 비중 = 논문 1편을 해당 분야 수로 균등 배분해 계산. "
+        "분류율 = 분석 논문 중 분야 정보가 있는 논문 비율. "
+        "연구실 전체 논문의 수집률·분류 정확도는 별도 확인 필요. "
+        "수집 누락·저자 및 연구실 식별 오류·분야 분류 기준에 따라 결과 변동 가능. "
+        "타전공자의 적응 가능성을 직접 판단하는 지표는 아님"
     )
 
 
