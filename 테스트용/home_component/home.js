@@ -172,8 +172,9 @@ export default function (component) {
     el.style.webkitLineClamp = String(lines);
     el.style.overflowWrap = lines === 1 ? 'normal' : 'anywhere';
   }
-  // 태그가 한 줄을 넘으면 뒤에서부터 접어서 +n으로
+  // 태그가 한 줄을 넘으면 뒤에서부터 접어서 +n으로. 남은 태그 하나도 길면 말줄임
   function fitTags(box) {
+    box.classList.add('measure');
     const all = Array.from(box.querySelectorAll('.tag:not(.more)'));
     let more = box.querySelector('.more'), hidden = more ? +more.textContent.slice(1) : 0;
     while (box.scrollWidth > box.clientWidth + 1 && all.length > 1) {
@@ -181,6 +182,8 @@ export default function (component) {
       if (!more) { more = document.createElement('span'); more.className = 'tag more'; box.appendChild(more); }
       more.textContent = '+' + hidden;
     }
+    all.forEach((t) => (t.title = t.textContent));
+    box.classList.remove('measure');
   }
   function renderSlots() {
     ['A', 'B'].forEach((k) => {
@@ -202,7 +205,10 @@ export default function (component) {
 
   // ---------- 검색 ----------
   function personFromOA(r) {
-    return { key: 'oa:' + r.oa_id, oa_id: r.oa_id, name: r.name, eng: '', aff: uniKo(r.inst), school: uniKo(r.inst), inst: r.inst, works: r.works, works_label: r.works_label || '전체 논문', field: r.field || null, tags: r.tags || [] };
+    // 한글 이름을 찾았으면 한글을 크게, OpenAlex 영문 이름을 작게
+    // OpenAlex에는 학과 정보가 없어서, 학과 자리에는 주 연구 분야(첫 번째 세부 분야)를 넣음
+    const tags = r.tags || [];
+    return { key: 'oa:' + r.oa_id, oa_id: r.oa_id, name: r.ko || r.name, eng: r.ko ? r.name : '', aff: uniKo(r.inst), school: uniKo(r.inst), inst: r.inst, works: r.works, works_label: r.works_label || '전체 논문', field: tags[0] || r.field || null, sub: tags[0] || '', tags: tags.slice(1) };
   }
   function rowHTML(p) {
     const onA = sameP(slots.A, p), onB = sameP(slots.B, p);
@@ -291,8 +297,8 @@ export default function (component) {
     pick.forEach((s) => (s.researchers || []).forEach((r) => {
       const prev = seen[r.oa_id];
       if (prev) { prev.works = Math.max(prev.works, r.works); return; }
-      const tags = [s.ko || s.en, field.ko || field.en].filter((t, i, a) => t && a.indexOf(t) === i);
-      const p = { key: 'oa:' + r.oa_id, oa_id: r.oa_id, name: r.name, eng: '', aff: uniKo(r.inst), school: uniKo(r.inst), inst: r.inst, works: r.works, works_label: '3년 논문', field: s.ko || s.en, subId: s.id, tags, yon: isYonsei(r.inst) };
+      const subName = s.ko || s.en, fieldName = field.ko || field.en;
+      const p = { key: 'oa:' + r.oa_id, oa_id: r.oa_id, name: r.name, eng: '', aff: uniKo(r.inst), school: uniKo(r.inst), inst: r.inst, works: r.works, works_label: '3년 논문', field: subName, sub: subName, subId: s.id, tags: fieldName && fieldName !== subName ? [fieldName] : [], yon: isYonsei(r.inst) };
       seen[r.oa_id] = p; out.push(p); searchPool[p.key] = p;
     }));
     return out.sort((a, b) => b.works - a.works);

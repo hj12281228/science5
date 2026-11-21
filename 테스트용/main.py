@@ -78,6 +78,23 @@ def _openalex_params():
     return {"api_key": key} if key else {}
 
 
+def _has_hangul(text):
+    return any("가" <= ch <= "힣" for ch in str(text or ""))
+
+
+def korean_display_name(query, cand):
+    """검색 결과를 한글 이름으로 보여주기 위한 이름 고르기
+    1) OpenAlex 이름 표기 중 한글이 있으면 그것 (검색어와 같은 것을 먼저)
+    2) 없으면, 한글로 검색한 경우 검색어
+    3) 둘 다 아니면 None (영문 그대로 표시)"""
+    alts = cand.get("alt_ko") or []
+    if query in alts:
+        return query
+    if alts:
+        return alts[0]
+    return query if _has_hangul(query) else None
+
+
 @st.cache_data(show_spinner=False, ttl=3600)
 def search_author_candidates(query_name):
     resp = requests.get(
@@ -95,13 +112,13 @@ def search_author_candidates(query_name):
             inst = insts[0].get("display_name") or inst
         elif author.get("last_known_institution"):
             inst = author["last_known_institution"].get("display_name", "소속 정보 없음")
-        # 카드에 붙일 연구 분야 태그: 저자의 주요 토픽에서 세부 분야(subfield)를 순서대로 최대 2개
+        # 카드에 붙일 연구 분야: 저자의 주요 토픽에서 세부 분야(subfield)를 순서대로 최대 3개 (첫 번째가 주 분야)
         tags = []
         for t in author.get("topics") or []:
             sub = (t.get("subfield") or {}).get("display_name")
             if sub and sub not in tags:
                 tags.append(sub)
-            if len(tags) >= 2:
+            if len(tags) >= 3:
                 break
         candidates.append({
             "id": author["id"],
@@ -109,6 +126,8 @@ def search_author_candidates(query_name):
             "institution": inst,
             "works_count": author.get("works_count", 0),
             "tags": tags,
+            # OpenAlex가 따로 모아 둔 이름 표기 중 한글이 들어 있는 것 (예: 김민석)
+            "alt_ko": [n for n in author.get("display_name_alternatives") or [] if _has_hangul(n)],
         })
     return candidates
 
@@ -334,6 +353,19 @@ def _yonsei_first(cands):
     return sorted(cands, key=lambda c: "Yonsei" not in (c.get("institution") or ""))
 
 
+def _fill_yonsei_works(person):
+    """학과 목록에서 담은 연세대 교수님에게 OpenAlex 전체 논문 수 붙이기 (실패하면 그대로 둠)"""
+    if not person or person.get("oa_id") or person.get("works") is not None or not person.get("eng"):
+        return person
+    try:
+        hit = next((c for c in search_author_candidates(person["eng"]) if "Yonsei" in (c.get("institution") or "")), None)
+    except Exception:
+        return person
+    if hit:
+        person = {**person, "works": hit.get("works_count") or 0, "works_label": "전체 논문"}
+    return person
+
+
 def _candidates_for(person):
     """비교함에 담긴 사람을 동명이인 확인용 후보 목록으로 바꾸기"""
     if person.get("oa_id"):
@@ -359,7 +391,7 @@ if st.session_state.step == 1:
         st.session_state.home_notice = None
 
         if kind == "slots":
-            st.session_state.home_slots = {"A": event.get("A"), "B": event.get("B")}
+            st.session_state.home_slots = {"A": _fill_yonsei_works(event.get("A")), "B": _fill_yonsei_works(event.get("B"))}
             st.rerun()  # 바뀐 비교함을 화면에 바로 반영
 
         elif kind == "search":
@@ -371,7 +403,8 @@ if st.session_state.step == 1:
                     "q": q,
                     "results": [
                         {"oa_id": c["id"], "name": c["name"], "inst": c["institution"], "works": c["works_count"],
-                         "tags": [SUBFIELD_KO.get(t, t) for t in c.get("tags", [])]}
+                         "tags": [SUBFIELD_KO.get(t, t) for t in c.get("tags", [])],
+                         "ko": korean_display_name(q, c)}
                         for c in cands
                     ],
                 }

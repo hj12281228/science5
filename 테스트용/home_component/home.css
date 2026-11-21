@@ -72,8 +72,9 @@
 .lm .pc .pn{width:100%;min-width:0;font-size:25px;font-weight:700;line-height:1.2;word-break:keep-all;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .lm .pc .pe{font-size:12.5px;opacity:.78;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;height:18px;margin-top:2px;flex:none}
 .lm .pc .tags{display:flex;gap:6px;margin-top:10px;overflow:hidden;min-width:0;min-height:24px;flex:none}
-.lm .pc .tag{flex:none;font-size:12px;padding:2px 9px;border-radius:999px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.22);white-space:nowrap}
-.lm .pc .tag.more{background:none}
+.lm .pc .tag{flex:0 1 auto;min-width:0;font-size:12px;padding:2px 9px;border-radius:999px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.22);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lm .pc .tags.measure .tag{flex:none}
+.lm .pc .tag.more{flex:none;background:none}
 .lm .pc .stats{margin-top:auto;display:flex;justify-content:space-between;align-items:baseline;gap:8px;border-top:1px solid rgba(255,255,255,.18);padding-top:10px;font-size:12px;min-width:0}
 .lm .pc .stats span{opacity:.75;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lm .pc .stats b{font-family:var(--f-disp);font-size:18px;white-space:nowrap}
@@ -176,8 +177,11 @@
   .lm .pc .school{gap:8px;margin:10px 0 8px}
   .lm .pc .nmbox{height:50px}
 }
-@media (max-width:860px){
+/* 비교 카드가 너무 좁아지지 않도록, 화면이 1024px보다 좁으면 검색과 비교함을 위아래로 */
+@media (max-width:1024px){
   .lm .hero{grid-template-columns:minmax(0,1fr);gap:28px;padding:28px 0 10px}
+}
+@media (max-width:860px){
   .lm .sky{grid-template-columns:minmax(0,1fr)}
   .lm .steps{grid-template-columns:1fr}
   .lm .allfields{grid-template-columns:repeat(2,minmax(0,1fr))}
