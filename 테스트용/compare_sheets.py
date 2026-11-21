@@ -157,13 +157,14 @@ CSS = """
 .out{background:var(--paper);border:1px solid var(--ink)}
 .sand{background:var(--sand)}
 .blk{background:var(--blk);color:#F3F2EE;border:1px solid var(--line)}.blk .tag{color:rgba(243,242,238,.55)}
-.h300{min-height:320px}.h280{min-height:280px}
+.h300{min-height:350px}.h280{min-height:280px}
+.lm-t:has(.lm-foot){padding-bottom:92px}
 .lm-ring{position:absolute;right:26px;top:24px}
 .lm-ring + .tag.hd .tt{max-width:calc(100% - 140px)}
 .lm-huge{font-family:var(--disp);letter-spacing:-.05em;line-height:.85;font-size:clamp(64px,7.6vw,112px)}
 .lm-huge.b{font-weight:700}.lm-huge.l{font-weight:300}.lm-huge.m{font-weight:500}
 .lm-huge u{text-decoration:none;font-size:.36em;font-weight:400;margin-left:4px;letter-spacing:0}
-.lm-mt{margin-top:64px}
+.lm-mt{margin-top:36px}
 .lm-sub{font-family:var(--mono);font-size:12px;letter-spacing:.02em;margin-top:12px;opacity:.85}
 .lm-foot{position:absolute;left:26px;right:26px;bottom:22px}
 .lm-row{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;gap:10px}
