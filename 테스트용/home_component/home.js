@@ -21,6 +21,14 @@ const UNI_KO = {
 const uniKo = (s) => (s && UNI_KO[s]) || s || '소속 정보 없음';
 const isYonsei = (s) => !!s && /Yonsei|연세/.test(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+// 학교 배지: logos에 파일이 있으면 로고, 없으면 글자 배지 (한글 이름은 앞 두 글자, 영문은 대문자 머리글자)
+const badgeText = (s) => {
+  s = String(s || '').trim();
+  if (!s) return '?';
+  if (/[가-힣]/.test(s)) return s.replace(/(대학교|대학|대)$/, '').slice(0, 2) || s.slice(0, 2);
+  const caps = s.split(/\s+/).filter((w) => /^[A-Z]/.test(w) && !/^(Of|And|The|For)$/i.test(w)).map((w) => w[0]).join('');
+  return (caps || s).slice(0, 4);
+};
 const fmtGrowth = (g) => (g == null ? '' : (g >= 0 ? '+' : '') + Math.round(g * 100) + '%');
 
 function ensureFonts() {
@@ -107,7 +115,11 @@ export default function (component) {
   ensureFonts();
   const D = data || {};
   const slots = { A: (D.slots && D.slots.A) || null, B: (D.slots && D.slots.B) || null };
-  const YON = (D.yonsei || []).map((p) => ({ ...p, key: 'y:' + p.name, aff: `연세대 ${p.dept}` }));
+  const YON = (D.yonsei || []).map((p) => ({ ...p, key: 'y:' + p.name, aff: `연세대 ${p.dept}`, school: '연세대', sub: p.dept }));
+  const LOGOS = D.logos || {};
+  const badge = (school, cls = '') => LOGOS[school]
+    ? `<span class="badge ${cls}"><img src="${LOGOS[school]}" alt="${esc(school)}"></span>`
+    : `<span class="badge txt ${cls}" aria-label="${esc(school)}">${esc(badgeText(school))}</span>`;
   const FS = D.fields || null;
 
   let root = parentElement.querySelector('.lm');
@@ -131,14 +143,44 @@ export default function (component) {
     send({ type: 'slots', A: slots.A, B: slots.B });
     renderAll();
   }
+  // 카드 크기는 고정. 이름은 fitName이, 태그는 fitTags가 칸에 맞춰 줄임
   function cardHTML(p, slot) {
     if (!p) return `<div class="qm">?</div><p><b>${slot}</b> 칸이 비어 있어요<br>아래에서 교수님을 담아 주세요</p>`;
-    const s1 = p.works != null ? `<div class="st"><small>${esc(p.works_label || '논문')}</small><b>${p.works}</b></div>` : `<div class="st"><small>단과대</small><b style="font-size:12.5px">${esc(p.col || '-')}</b></div>`;
-    const s2 = `<div class="st"><small>${p.field ? '주 분야' : '학과'}</small><b style="font-size:12.5px">${esc(p.field || p.dept || '-')}</b></div>`;
-    return `<div class="sheen"></div><button class="rm" type="button" data-rm="${slot}">빼기</button>
-      <div class="slot">LAB ${slot}</div><div class="mono">${esc((p.name || '?')[0])}</div>
-      <div class="pn">${esc(p.name)}</div><div class="pe">${esc(p.eng || '')}</div><div class="pa">${esc(p.aff || '')}</div>
-      <div class="stats">${s1}${s2}</div>`;
+    const school = p.school || p.aff || '';
+    const sub = p.sub || (p.inst && p.inst !== school ? p.inst : '');
+    const tags = (p.tags || []).filter(Boolean);
+    const tagHTML = tags.slice(0, 2).map((t) => `<span class="tag">${esc(t)}</span>`).join('') + (tags.length > 2 ? `<span class="tag more">+${tags.length - 2}</span>` : '');
+    const stat = p.works != null
+      ? `<span>${esc(p.works_label === '3년 논문' ? '최근 3년 논문' : p.works_label || '논문')}</span><b>${p.works}<small> 편</small></b>`
+      : `<span>${esc(p.col || '')}</span>`;
+    return `<div class="sheen"></div>
+      <div class="ctop"><div class="slot">LAB ${slot}</div><button class="rm" type="button" data-rm="${slot}">빼기</button></div>
+      <div class="school">${badge(school)}<div class="sch"><b>${esc(school || '소속 정보 없음')}</b>${sub ? `<span title="${esc(sub)}">${esc(sub)}</span>` : ''}</div></div>
+      <div class="nmbox"><div class="pn" title="${esc(p.name)}">${esc(p.name)}</div></div><div class="pe">${esc(p.eng || '')}</div>
+      <div class="tags">${tagHTML}</div>
+      <div class="stats">${stat}</div>`;
+  }
+  // 한글 이름(띄어쓰기 없음)은 1줄, 영문 이름은 2줄까지. 큰 글자부터 줄여 보고, 최소 크기에서도 넘치면 말줄임(마우스를 올리면 전체 이름)
+  function fitName(el) {
+    const narrow = el.closest('.pc').clientWidth < 200;
+    const max = narrow ? 20 : 25, min = narrow ? 14 : 15;
+    const lines = /\s/.test(el.textContent.trim()) ? 2 : 1;
+    el.style.webkitLineClamp = 'unset';
+    let size = max;
+    for (; size > min; size--) { el.style.fontSize = size + 'px'; if (Math.round(el.scrollHeight / (size * 1.2)) <= lines && el.scrollWidth <= el.clientWidth + 1) break; }
+    el.style.fontSize = size + 'px';
+    el.style.webkitLineClamp = String(lines);
+    el.style.overflowWrap = lines === 1 ? 'normal' : 'anywhere';
+  }
+  // 태그가 한 줄을 넘으면 뒤에서부터 접어서 +n으로
+  function fitTags(box) {
+    const all = Array.from(box.querySelectorAll('.tag:not(.more)'));
+    let more = box.querySelector('.more'), hidden = more ? +more.textContent.slice(1) : 0;
+    while (box.scrollWidth > box.clientWidth + 1 && all.length > 1) {
+      all.pop().remove(); hidden++;
+      if (!more) { more = document.createElement('span'); more.className = 'tag more'; box.appendChild(more); }
+      more.textContent = '+' + hidden;
+    }
   }
   function renderSlots() {
     ['A', 'B'].forEach((k) => {
@@ -146,6 +188,7 @@ export default function (component) {
       const p = slots[k];
       el.className = 'pc ' + k + (p ? ' filled' : ' empty') + (UI.popSlot === k ? ' pop' : '');
       el.innerHTML = cardHTML(p, k);
+      if (p) { fitName(el.querySelector('.pn')); fitTags(el.querySelector('.tags')); }
     });
     UI.popSlot = null;
     const n = (slots.A ? 1 : 0) + (slots.B ? 1 : 0);
@@ -159,12 +202,12 @@ export default function (component) {
 
   // ---------- 검색 ----------
   function personFromOA(r) {
-    return { key: 'oa:' + r.oa_id, oa_id: r.oa_id, name: r.name, eng: '', aff: uniKo(r.inst), works: r.works, works_label: r.works_label || '전체 논문', field: r.field || null };
+    return { key: 'oa:' + r.oa_id, oa_id: r.oa_id, name: r.name, eng: '', aff: uniKo(r.inst), school: uniKo(r.inst), inst: r.inst, works: r.works, works_label: r.works_label || '전체 논문', field: r.field || null, tags: r.tags || [] };
   }
   function rowHTML(p) {
     const onA = sameP(slots.A, p), onB = sameP(slots.B, p);
     const extra = p.works != null ? `, ${esc(p.works_label || '논문')} ${p.works}편` : '';
-    return `<div class="row"><div class="avatar">${esc((p.name || '?')[0])}</div><div class="meta"><div class="nm">${esc(p.name)} <span style="color:var(--faint);font-weight:400">${esc(p.eng || '')}</span></div><div class="af">${esc(p.aff)}${extra}</div></div>
+    return `<div class="row">${badge(p.school || p.aff, 'sm')}<div class="meta"><div class="nm">${esc(p.name)} <span style="color:var(--faint);font-weight:400">${esc(p.eng || '')}</span></div><div class="af">${esc(p.aff)}${extra}</div></div>
       <div class="mini"><button class="a ${onA ? 'on' : ''}" type="button" data-add="A" data-key="${esc(p.key)}">A</button><button class="b ${onB ? 'on' : ''}" type="button" data-add="B" data-key="${esc(p.key)}">B</button></div></div>`;
   }
   const searchPool = {};
@@ -222,8 +265,8 @@ export default function (component) {
       el.style.opacity = Math.abs(off) > 2 ? 0 : off === 0 ? 1 : 0.55;
       el.style.zIndex = 10 - Math.abs(off);
       const onA = sameP(slots.A, p), onB = sameP(slots.B, p);
-      el.innerHTML = `<div class="mono">${esc(p.name[0])}</div><div class="pn">${esc(p.name)}</div><div class="pe">${esc(p.eng)}</div>
-        <div class="pd">${esc(p.col)}<br>${esc(p.dept)}</div>
+      el.innerHTML = `<div class="eyebrow">${esc(p.col)}</div><div class="pn">${esc(p.name)}</div><div class="pe">${esc(p.eng)}</div>
+        <div class="pd">${esc(p.dept)}</div>
         <div class="acts"><button class="add a ${onA ? 'on' : ''}" type="button" data-add="A" data-key="${esc(p.key)}">${onA ? 'A에 담김' : 'A에 담기'}</button><button class="add b ${onB ? 'on' : ''}" type="button" data-add="B" data-key="${esc(p.key)}">${onB ? 'B에 담김' : 'B에 담기'}</button></div>`;
       el.dataset.idx = i;
       st.appendChild(el);
@@ -248,7 +291,8 @@ export default function (component) {
     pick.forEach((s) => (s.researchers || []).forEach((r) => {
       const prev = seen[r.oa_id];
       if (prev) { prev.works = Math.max(prev.works, r.works); return; }
-      const p = { key: 'oa:' + r.oa_id, oa_id: r.oa_id, name: r.name, eng: '', aff: uniKo(r.inst), inst: r.inst, works: r.works, works_label: '3년 논문', field: s.ko || s.en, sub: s.id, yon: isYonsei(r.inst) };
+      const tags = [s.ko || s.en, field.ko || field.en].filter((t, i, a) => t && a.indexOf(t) === i);
+      const p = { key: 'oa:' + r.oa_id, oa_id: r.oa_id, name: r.name, eng: '', aff: uniKo(r.inst), school: uniKo(r.inst), inst: r.inst, works: r.works, works_label: '3년 논문', field: s.ko || s.en, subId: s.id, tags, yon: isYonsei(r.inst) };
       seen[r.oa_id] = p; out.push(p); searchPool[p.key] = p;
     }));
     return out.sort((a, b) => b.works - a.works);
@@ -278,7 +322,7 @@ export default function (component) {
     const [y0, y1] = FS.window || [2023, 2025];
     body.innerHTML = `<p class="basis">국내 기관 논문이 ${FS.prev ? FS.prev[0] + '~' + FS.prev[1] + '년 대비 ' : ''}${y0}~${y1}년에 많이 늘어난 분야 순</p>
       <div class="chips">${chips}</div>${all}${subChips}
-      <div class="sky"><div class="canvasbox"><canvas></canvas><div class="legend"><span><i style="background:var(--A)"></i>연세대</span><span><i style="background:#9AA5B3"></i>다른 국내 기관</span></div></div>
+      <div class="sky"><div class="canvasbox"><canvas></canvas><div class="legend"><span><i style="background:var(--A)"></i>연세대</span><span><i style="background:var(--dot)"></i>다른 국내 기관</span></div></div>
       <div class="rank"><h3>${title}</h3><p class="cap">국내 기관 전체, ${y0}~${y1}년 논문 수 기준</p><div class="rank-list"></div><div class="src">출처: OpenAlex (${esc(FS.generated || '')} 집계)</div></div></div>`;
     renderRank();
     startSky();
@@ -324,24 +368,27 @@ export default function (component) {
     });
     sky = { nodes, hover: null, raf: 0 };
     parentElement.__lmSky = sky;
+    const cs = getComputedStyle(root), tok = (n, d) => (cs.getPropertyValue(n) || '').trim() || d;
+    const C = { A: tok('--A', '#3D5A80'), B: tok('--B', '#5E8C83'), ink: tok('--ink', '#1C2430'), faint: tok('--faint', '#98A2B0'), other: tok('--dot', '#7D8898') };
+    const alpha = (hex, a) => { const h = hex.replace('#', ''); const n = parseInt(h.length === 3 ? h.replace(/./g, '$&$&') : h, 16); return `rgba(${n >> 16 & 255},${n >> 8 & 255},${n & 255},${a})`; };
     const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const draw = (t) => {
       ctx.clearRect(0, 0, W, H);
       const act = (n) => !UI.sub || subs[n.ci].id === UI.sub;
       nodes.forEach((a, i) => nodes.forEach((b, j) => {
         if (j <= i || a.ci !== b.ci) return;
-        if (Math.hypot(a.x - b.x, a.y - b.y) < 62) { ctx.strokeStyle = act(a) ? 'rgba(61,90,128,.22)' : 'rgba(150,160,175,.12)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke(); }
+        if (Math.hypot(a.x - b.x, a.y - b.y) < 62) { ctx.strokeStyle = act(a) ? alpha(C.A, 0.22) : alpha(C.other, 0.12); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke(); }
       }));
       nodes.forEach((n) => {
         const on = act(n), tw = on && !reduce ? 1 + Math.sin(t / 600 + n.x) * 0.08 : 1;
         ctx.beginPath(); ctx.arc(n.x, n.y, n.r * tw, 0, Math.PI * 2);
-        ctx.fillStyle = n.p.yon ? (on ? '#3D5A80' : 'rgba(61,90,128,.35)') : (on ? '#7D8898' : 'rgba(154,165,179,.35)');
+        ctx.fillStyle = n.p.yon ? (on ? C.A : alpha(C.A, 0.35)) : (on ? C.other : alpha(C.other, 0.35));
         ctx.fill();
         const isA = sameP(slots.A, n.p), isB = sameP(slots.B, n.p);
-        if (isA || isB || sky.hover === n) { ctx.lineWidth = 2; ctx.strokeStyle = isB ? '#5E8C83' : '#1C2430'; ctx.beginPath(); ctx.arc(n.x, n.y, n.r + 4, 0, Math.PI * 2); ctx.stroke(); }
+        if (isA || isB || sky.hover === n) { ctx.lineWidth = 2; ctx.strokeStyle = isB ? C.B : isA ? C.A : C.ink; ctx.beginPath(); ctx.arc(n.x, n.y, n.r + 4, 0, Math.PI * 2); ctx.stroke(); }
       });
       ctx.font = '600 13px "IBM Plex Sans KR", sans-serif'; ctx.textAlign = 'center';
-      subs.forEach((s, i) => { ctx.fillStyle = !UI.sub || s.id === UI.sub ? '#1C2430' : '#98A2B0'; ctx.fillText(s.ko || s.en, centers[i].x, Math.max(18, centers[i].y - Math.min(W, H) * 0.15 - 8)); });
+      subs.forEach((s, i) => { ctx.fillStyle = !UI.sub || s.id === UI.sub ? C.ink : C.faint; ctx.fillText(s.ko || s.en, centers[i].x, Math.max(18, centers[i].y - Math.min(W, H) * 0.15 - 8)); });
       if (!reduce && sky) sky.raf = requestAnimationFrame(draw);
     };
     sky.raf = requestAnimationFrame(draw);
@@ -435,6 +482,16 @@ export default function (component) {
     });
     root.addEventListener('pointerout', (e) => { const el = e.target.closest && e.target.closest('.pc'); if (el && !el.contains(e.relatedTarget)) el.style.transform = ''; });
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && UI.help) { UI.help = false; root.querySelector('.scrim').hidden = true; } });
+  }
+
+  // 웹폰트가 늦게 도착하거나 창 크기가 바뀌면 카드 이름과 태그를 다시 맞춤
+  const refit = () => root.querySelectorAll('.pc.filled').forEach((el) => { fitName(el.querySelector('.pn')); fitTags(el.querySelector('.tags')); });
+  root.__lm.refit = refit;
+  if (!root.__fitBound) {
+    root.__fitBound = true;
+    let tm = 0;
+    window.addEventListener('resize', () => { clearTimeout(tm); tm = setTimeout(() => root.__lm.renderAll(), 150); });
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => root.__lm.refit());
   }
 
   // 처음 그리기 (데이터가 바뀔 때마다 다시 호출됨)

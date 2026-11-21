@@ -6,6 +6,7 @@ import requests
 import streamlit as st
 
 from home_page import render_home
+from build_home_snapshot import SUBFIELD_KO
 
 # 조원들이 만든 5개의 지표 함수 불러오기
 from practice1 import render_toptier
@@ -94,11 +95,20 @@ def search_author_candidates(query_name):
             inst = insts[0].get("display_name") or inst
         elif author.get("last_known_institution"):
             inst = author["last_known_institution"].get("display_name", "소속 정보 없음")
+        # 카드에 붙일 연구 분야 태그: 저자의 주요 토픽에서 세부 분야(subfield)를 순서대로 최대 2개
+        tags = []
+        for t in author.get("topics") or []:
+            sub = (t.get("subfield") or {}).get("display_name")
+            if sub and sub not in tags:
+                tags.append(sub)
+            if len(tags) >= 2:
+                break
         candidates.append({
             "id": author["id"],
             "name": author["display_name"],
             "institution": inst,
-            "works_count": author.get("works_count", 0)
+            "works_count": author.get("works_count", 0),
+            "tags": tags,
         })
     return candidates
 
@@ -360,7 +370,8 @@ if st.session_state.step == 1:
                 st.session_state.home_search = {
                     "q": q,
                     "results": [
-                        {"oa_id": c["id"], "name": c["name"], "inst": c["institution"], "works": c["works_count"]}
+                        {"oa_id": c["id"], "name": c["name"], "inst": c["institution"], "works": c["works_count"],
+                         "tags": [SUBFIELD_KO.get(t, t) for t in c.get("tags", [])]}
                         for c in cands
                     ],
                 }
