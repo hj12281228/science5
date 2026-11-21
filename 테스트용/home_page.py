@@ -19,11 +19,15 @@ LOGO_DIR = COMP_DIR / "logos"
 
 
 @st.cache_resource(show_spinner=False)
+def _make_component(css, js):
+    return st.components.v2.component("labmatch_home", css=css, js=js)
+
+
 def _home_component():
-    return st.components.v2.component(
-        "labmatch_home",
-        css=(COMP_DIR / "home.css").read_text(encoding="utf-8"),
-        js=(COMP_DIR / "home.js").read_text(encoding="utf-8"),
+    # CSS/JS 내용을 캐시 키로 넘겨서, 파일이 바뀌어 배포되면 서버를 재시작하지 않아도 새 화면이 나오게 함
+    return _make_component(
+        (COMP_DIR / "home.css").read_text(encoding="utf-8"),
+        (COMP_DIR / "home.js").read_text(encoding="utf-8"),
     )
 
 
