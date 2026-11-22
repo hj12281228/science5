@@ -17,6 +17,36 @@ const UNI_KO = {
   'Korea Institute of Science and Technology': 'KIST', 'Catholic University of Korea': '가톨릭대', 'Chonbuk National University': '전북대',
   'Jeonbuk National University': '전북대', 'Chungbuk National University': '충북대', 'Gyeongsang National University': '경상국립대',
   'Kangwon National University': '강원대', 'Hallym University': '한림대', 'Sejong University': '세종대', 'Kookmin University': '국민대',
+  'Yeungnam University': '영남대', 'Gachon University': '가천대', 'Pukyong National University': '부경대', 'Jeju National University': '제주대',
+  'Inje University': '인제대', 'Kwangwoon University': '광운대', 'Dankook University': '단국대', 'Chosun University': '조선대', 'University of Ulsan': '울산대',
+  'Incheon National University': '인천대', 'Seoul National University of Science and Technology': '서울과기대', 'Changwon National University': '창원대',
+  'Kunsan National University': '군산대', 'Kumoh National Institute of Technology': '금오공대', 'Korea Maritime and Ocean University': '한국해양대',
+  'Sangmyung University': '상명대', 'Soongsil University': '숭실대', 'Hongik University': '홍익대', 'Kyonggi University': '경기대', 'Joongbu University': '중부대',
+  'Woosong University': '우송대', 'Konyang University': '건양대', 'Kongju National University': '공주대', 'Kyungsung University': '경성대',
+  "Sungshin Women's University": '성신여대', "Sookmyung Women's University": '숙명여대', 'Korea University of Technology and Education': '한국기술교육대',
+  'Hannam University': '한남대', 'Hankyong National University': '한경국립대', 'Wonkwang University': '원광대', 'Keimyung University': '계명대',
+  'Sahmyook University': '삼육대', 'Dong-A University': '동아대', 'Sunchon National University': '순천대', 'Korea National University of Transportation': '한국교통대',
+  'Tongmyong University': '동명대', 'Mokpo National University': '목포대', "Dongduk Women's University": '동덕여대', 'Gangneung–Wonju National University': '강릉원주대',
+  'Hanbat National University': '한밭대', 'Cheongju University': '청주대', 'Soonchunhyang University': '순천향대', 'Jeonju University': '전주대',
+  'Daegu Catholic University': '대구가톨릭대', 'Sun Moon University': '선문대', 'Korea National University of Education': '한국교원대', 'Daegu National University of Education': '대구교대',
+  'Cheju Halla University': '제주한라대', 'Myongji University': '명지대', 'Kyungnam University': '경남대', 'Hoseo University': '호서대', 'Daegu University': '대구대',
+  'Kangwon National University Hospital': '강원대병원', 'Hanyang University Hospital': '한양대병원', 'Korea University Anam Hospital': '고려대안암병원',
+  'Korea University Ansan Hospital': '고려대안산병원', 'Korea University Guro Hospital': '고려대구로병원', 'Seoul National University Bundang Hospital': '서울대분당병원',
+  'Pusan National University Hospital': '부산대병원', 'Pusan National University Yangsan Hospital': '양산부산대병원', 'Pusan National University Dental Hospital': '부산대치과병원',
+  'Chung-Ang University Hospital': '중앙대병원', 'Ajou University Hospital': '아주대병원', 'Kyung Hee University Hospital': '경희대병원', 'Inha University Hospital': '인하대병원',
+  'Yonsei University Health System': '연세의료원', 'Gangnam Severance Hospital': '강남세브란스병원', 'Samsung (South Korea)': '삼성전자', 'Korea Institute of Science and Technology Information': 'KISTI',
+  'Korea Research Institute of Chemical Technology': '화학연', 'Korea Atomic Energy Research Institute': '원자력연', 'Korea Institute of Geoscience and Mineral Resources': '지질자원연',
+  'Institute for Basic Science': 'IBS', 'Korea Institute of Ocean Science and Technology': '해양과기원', 'Electronics and Telecommunications Research Institute': 'ETRI',
+  'Korea Institute of Materials Science': '재료연', 'Korea Astronomy and Space Science Institute': '천문연', 'Korea Polar Research Institute': '극지연',
+  'Rural Development Administration': '농촌진흥청', 'Korea Disease Control and Prevention Agency': '질병관리청', 'National Cancer Center': '국립암센터',
+  'Korea Institute for International Economic Policy': '대외경제정책연', 'International Vaccine Institute': '국제백신연', 'Korea Basic Science Institute': '기초과학지원연',
+  'Korea Institute for Advanced Study': '고등과학원', 'Korea Institute of Energy Research': '에너지연', 'Korea National Institute of Health': '국립보건연',
+  'Korea Institute of Oriental Medicine': '한의학연', 'National Institute of Environmental Research': '국립환경과학원', 'National Institute of Fisheries Science': '수산과학원',
+  'World Institute of Kimchi': '세계김치연', 'The Seoul Institute': '서울연구원', 'Korea Institute of Industrial Technology': '생기연', 'Korea Institute of Machinery and Materials': '기계연',
+  'Korea Electrotechnology Research Institute': '전기연', 'Korea Institute of Civil Engineering and Building Technology': '건설연', 'Korea Food Research Institute': '식품연',
+  'Korea Research Institute of Bioscience and Biotechnology': '생명연', 'Korea Research Institute of Standards and Science': '표준연', 'Korea Institute of Toxicology': '안전성평가연',
+  "The Catholic University of Korea Seoul St. Mary's Hospital": '서울성모병원', "Seoul St. Mary's Hospital": '서울성모병원', "The Catholic University of Korea St. Vincent's Hospital": '성빈센트병원',
+  'Keimyung University Dongsan Medical Center': '계명대동산병원', 'Jeju National University Hospital': '제주대병원', 'Dong-A University Hospital': '동아대병원', 'SUNY Korea': '한국뉴욕주립대',
 };
 const uniKo = (s) => (s && UNI_KO[s]) || s || '소속 정보 없음';
 const isYonsei = (s) => !!s && /Yonsei|연세/.test(s);
@@ -117,8 +147,11 @@ export default function (component) {
   const slots = { A: (D.slots && D.slots.A) || null, B: (D.slots && D.slots.B) || null };
   const YON = (D.yonsei || []).map((p) => ({ ...p, key: 'y:' + p.name, aff: `연세대 ${p.dept}`, school: '연세대', sub: p.dept, tags: p.tags || [], works_label: p.works != null ? '전체 논문' : undefined }));
   const LOGOS = D.logos || {};
-  const badge = (school, cls = '') => LOGOS[school]
-    ? `<span class="badge ${cls}"><img src="${LOGOS[school]}" alt="${esc(school)}"></span>`
+  // 학교 로고: 이름이 같은 로고, 없으면 앞부분이 같은 가장 긴 로고 (예: 서울대병원 → 서울대)
+  const LOGO_KEYS = Object.keys(LOGOS).sort((a, b) => b.length - a.length);
+  const logoKey = (school) => (school && (LOGOS[school] ? school : LOGO_KEYS.find((k) => school.startsWith(k)))) || null;
+  const badge = (school, cls = '') => logoKey(school)
+    ? `<span class="badge ${cls}"><img src="${LOGOS[logoKey(school)]}" alt="${esc(school)}"></span>`
     : `<span class="badge txt ${cls}" aria-label="${esc(school)}">${esc(badgeText(school))}</span>`;
   const FS = D.fields || null;
 
@@ -129,9 +162,26 @@ export default function (component) {
     parentElement.appendChild(holder);
     root = holder.querySelector('.lm');
   }
-  // 다크모드: Streamlit 테마에 맞춰 색 바꾸기 (A·B 색은 Python이 넘겨줌)
-  root.classList.toggle('dark', D.theme === 'dark');
-  for (const [k, v] of Object.entries(D.colors || {})) root.style.setProperty('--' + k, v);
+  // 다크모드: Streamlit의 실제 배경색으로 테마를 알아내서 색을 바꿈.
+  // (메뉴에서 Light/Dark를 바꾸면 파이썬은 다시 실행되지 않으므로, 여기서 0.4초마다 확인해서 바로 따라감)
+  const hostEl = parentElement instanceof Element ? parentElement : parentElement.host;
+  const detectDark = () => {
+    const v = (getComputedStyle(hostEl).getPropertyValue('--st-background-color') || '').trim();
+    const m = v.match(/^#?([0-9a-f]{6})$/i);
+    if (!m) return null;
+    const n = parseInt(m[1], 16);
+    return (0.2126 * (n >> 16 & 255) + 0.7152 * (n >> 8 & 255) + 0.0722 * (n & 255)) / 255 < 0.5;
+  };
+  const applyTheme = (dark) => {
+    root.__dark = dark;
+    root.classList.toggle('dark', dark);
+    const pal = (D.palettes || {})[dark ? 'dark' : 'light'] || {};
+    for (const [k, v] of Object.entries(pal)) root.style.setProperty('--' + k, v);
+    if (parentElement.__lmSky && parentElement.__lmSky.refreshColors) { parentElement.__lmSky.refreshColors(); parentElement.__lmSky.kick(); }
+  };
+  { const d = detectDark(); applyTheme(d === null ? D.theme === 'dark' : d); }
+  clearInterval(root.__themeTimer);
+  root.__themeTimer = setInterval(() => { const d = detectDark(); if (d !== null && d !== root.__dark) applyTheme(d); }, 400);
   const $ = (s) => root.querySelector(s);
   const $$ = (s) => Array.from(root.querySelectorAll(s));
   const send = (ev) => setTriggerValue('event', { ...ev, t: Date.now() });
@@ -329,7 +379,7 @@ export default function (component) {
       const prev = seen[r.oa_id];
       if (prev) { prev.works = Math.max(prev.works, r.works); return; }
       const subName = s.ko || s.en, fieldName = field.ko || field.en;
-      const p = { key: 'oa:' + r.oa_id, oa_id: r.oa_id, name: r.name, eng: '', aff: uniKo(r.inst), school: uniKo(r.inst), inst: r.inst, works: r.works, works_label: '3년 논문', field: subName, sub: subName, subId: s.id, tags: fieldName && fieldName !== subName ? [fieldName] : [], yon: isYonsei(r.inst) };
+      const p = { key: 'oa:' + r.oa_id, oa_id: r.oa_id, name: r.ko || r.name, eng: r.ko ? r.name : '', aff: uniKo(r.inst), school: uniKo(r.inst), inst: r.inst, works: r.works, works_label: '3년 논문', field: subName, sub: subName, subId: s.id, tags: fieldName && fieldName !== subName ? [fieldName] : [], yon: isYonsei(r.inst) };
       seen[r.oa_id] = p; out.push(p); searchPool[p.key] = p;
     }));
     return out.sort((a, b) => b.works - a.works);
@@ -359,7 +409,7 @@ export default function (component) {
     const [y0, y1] = FS.window || [2023, 2025];
     body.innerHTML = `<p class="basis">국내 기관 논문이 ${FS.prev ? FS.prev[0] + '~' + FS.prev[1] + '년 대비 ' : ''}${y0}~${y1}년에 많이 늘어난 분야 순</p>
       <div class="chips">${chips}</div>${all}${subChips}
-      <div class="sky"><div class="canvasbox"><canvas></canvas><div class="legend"><span><i style="background:var(--A)"></i>연세대</span><span><i style="background:var(--dot)"></i>다른 국내 기관</span></div></div>
+      <div class="sky"><div class="canvasbox"><canvas aria-label="세부 분야별 연구자 별자리. 점을 끌어 당기거나 빈 곳을 끌어 돌려 볼 수 있어요. 같은 연구자 목록은 오른쪽 순위에 있어요." role="img"></canvas><div class="skybar"><span class="hint">점을 끌어 당기거나, 빈 곳을 끌어 돌려 보세요</span><button class="ghost sm" type="button" data-act="sky-reset">처음 모양으로</button></div><div class="legend"><span><i style="background:var(--A)"></i>연세대</span><span><i style="background:var(--dot)"></i>다른 국내 기관</span></div></div>
       <div class="rank"><h3>${title}</h3><p class="cap">국내 기관 전체, ${y0}~${y1}년 논문 수 기준</p><div class="rank-list"></div><div class="src">출처: OpenAlex (${esc(FS.generated || '')} 집계)</div></div></div>`;
     renderRank();
     startSky();
@@ -371,82 +421,242 @@ export default function (component) {
     const mx = list[0] ? list[0].works : 1;
     box.innerHTML = list.length ? list.map((p, i) => {
       const onA = sameP(slots.A, p), onB = sameP(slots.B, p);
-      return `<div class="rk"><span class="n">${i + 1}</span><div style="min-width:0"><div class="nm">${esc(p.name)}${p.yon ? '<span class="yon">연세대</span>' : ''}</div><div class="af">${esc(p.aff)}, 논문 ${p.works}편</div><div class="bar"><i style="width:${(p.works / mx) * 100}%"></i></div></div>
+      return `<div class="rk"><span class="n">${i + 1}</span>${badge(p.school, 'sm')}<div style="min-width:0"><div class="nm">${esc(p.name)}${p.eng ? `<span class="en">${esc(p.eng)}</span>` : ''}${p.yon ? '<span class="yon">연세대</span>' : ''}</div><div class="af">${esc(p.aff)}, 최근 3년 논문 ${p.works}편</div><div class="bar"><i style="width:${(p.works / mx) * 100}%"></i></div></div>
         <div class="mini"><button class="a ${onA ? 'on' : ''}" type="button" data-add="A" data-key="${esc(p.key)}">A</button><button class="b ${onB ? 'on' : ''}" type="button" data-add="B" data-key="${esc(p.key)}">B</button></div></div>`;
     }).join('') : `<div class="empty-note">이 분야의 연구자 데이터가 없어요.</div>`;
   }
 
-  // ---------- 별자리 캔버스 ----------
+  // ---------- 별자리 캔버스 (끌어 당기고 돌려 볼 수 있음) ----------
+  // 점 = 연구자. 세부 분야마다 한 무리(별자리)로 모이고, 가까운 점끼리 선(스프링)으로 이어짐.
+  // - 점을 끌면 이어진 점들이 따라오고, 놓으면 제자리로 돌아감
+  // - 빈 곳을 끌면 전체가 돌아감 (놓으면 관성으로 조금 더 돎)
+  // - 점을 누르면(끌지 않고) 정보와 A/B 담기 버튼
   let sky = parentElement.__lmSky || null;
-  function stopSky() { if (sky && sky.raf) cancelAnimationFrame(sky.raf); sky = null; parentElement.__lmSky = null; }
+  function stopSky() {
+    if (sky) { cancelAnimationFrame(sky.raf); if (sky.ro) sky.ro.disconnect(); if (sky.io) sky.io.disconnect(); }
+    sky = null; parentElement.__lmSky = null;
+  }
+  const logoImgs = {};
+  const logoImg = (school) => {
+    const k = logoKey(school);
+    if (!k) return null;
+    if (!logoImgs[k]) { const im = new Image(); im.src = LOGOS[k]; logoImgs[k] = im; }
+    return logoImgs[k].complete ? logoImgs[k] : null;
+  };
+  function skyColors() {
+    const cs = getComputedStyle(root), tok = (n, d) => (cs.getPropertyValue(n) || '').trim() || d;
+    return { A: tok('--A', '#93BAB5'), B: tok('--B', '#F5CB71'), ink: tok('--ink', '#1C2430'), sub: tok('--sub', '#5F6B7A'), faint: tok('--faint', '#98A2B0'), other: tok('--dot', '#7D8898'), surface: tok('--surface', '#FFFFFF'), line: tok('--line', '#E3E6EB') };
+  }
   function startSky() {
     stopSky();
     const box = $('.canvasbox');
     const cv = box.querySelector('canvas');
     const ctx = cv.getContext('2d');
-    const r = box.getBoundingClientRect();
-    const W = r.width || 700, H = r.height || 420, dpr = window.devicePixelRatio || 1;
-    cv.width = W * dpr; cv.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const subs = curSubs().slice(0, 6);
-    const centers = subs.map((s, i) => {
-      if (subs.length === 1) return { x: W / 2, y: H / 2 + 10 };
-      const a = (i / subs.length) * Math.PI * 2 - Math.PI / 2;
-      return { x: W / 2 + Math.cos(a) * W * 0.32, y: H / 2 + 14 + Math.sin(a) * H * 0.27 };
-    });
+    // 세계 좌표: 가운데가 (0,0). 무리 중심은 원 위에 고르게
+    const RING = 150;
+    const centers = subs.map((s, i) => subs.length === 1 ? { x: 0, y: 0 } : { x: Math.cos((i / subs.length) * Math.PI * 2 - Math.PI / 2) * RING, y: Math.sin((i / subs.length) * Math.PI * 2 - Math.PI / 2) * RING });
     let seed = 11; const rnd = () => ((seed = (seed * 9301 + 49297) % 233280), seed / 233280);
     const nodes = [];
     subs.forEach((s, ci) => {
       const list = researchersOf(curField(), s.id).slice(0, 14);
       const mx = list[0] ? list[0].works : 1;
       list.forEach((p) => {
-        const a = rnd() * Math.PI * 2, d = 12 + rnd() * Math.min(W, H) * 0.12;
-        nodes.push({ p, ci, x: centers[ci].x + Math.cos(a) * d, y: centers[ci].y + Math.sin(a) * d, r: 3 + (p.works / mx) * 6 });
+        const a = rnd() * Math.PI * 2, d = 10 + rnd() * 48;
+        const x = centers[ci].x + Math.cos(a) * d, y = centers[ci].y + Math.sin(a) * d;
+        nodes.push({ p, ci, x, y, vx: 0, vy: 0, hx: x, hy: y, r: 3.5 + (p.works / mx) * 6.5 });
       });
     });
-    sky = { nodes, hover: null, raf: 0 };
-    parentElement.__lmSky = sky;
-    const cs = getComputedStyle(root), tok = (n, d) => (cs.getPropertyValue(n) || '').trim() || d;
-    const C = { A: tok('--A', '#93BAB5'), B: tok('--B', '#F5CB71'), ink: tok('--ink', '#1C2430'), faint: tok('--faint', '#98A2B0'), other: tok('--dot', '#7D8898') };
-    const alpha = (hex, a) => { const h = hex.replace('#', ''); const n = parseInt(h.length === 3 ? h.replace(/./g, '$&$&') : h, 16); return `rgba(${n >> 16 & 255},${n >> 8 & 255},${n & 255},${a})`; };
-    const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const draw = (t) => {
+    // 같은 무리 안의 점들을 모두 이어지게(최소 신장 트리) 잇고, 가장 가까운 점과 한 번 더 이음 → 한 점을 끌면 무리 전체가 따라옴
+    const links = [];
+    const linked = (i, j) => links.some((l) => (l.a === i && l.b === j) || (l.a === j && l.b === i));
+    const dist = (i, j) => Math.hypot(nodes[i].hx - nodes[j].hx, nodes[i].hy - nodes[j].hy);
+    subs.forEach((_, ci) => {
+      const ids = nodes.map((n, i) => (n.ci === ci ? i : -1)).filter((i) => i >= 0);
+      if (ids.length < 2) return;
+      const inT = new Set([ids[0]]);
+      while (inT.size < ids.length) {
+        let best = null;
+        for (const i of inT) for (const j of ids) if (!inT.has(j) && (!best || dist(i, j) < best.d)) best = { i, j, d: dist(i, j) };
+        links.push({ a: best.i, b: best.j, len: best.d }); inT.add(best.j);
+      }
+      ids.forEach((i) => {
+        const j = ids.filter((k) => k !== i && !linked(i, k)).sort((u, v) => dist(i, u) - dist(i, v))[0];
+        if (j != null && dist(i, j) < 46) links.push({ a: i, b: j, len: dist(i, j) });
+      });
+    });
+    const st = { nodes, links, hover: null, raf: 0, angle: parentElement.__lmAngle || 0, spin: 0, drag: null, tipNode: null, visible: true, C: skyColors(), W: 0, H: 0, scale: 1, idle: 0 };
+    sky = st; parentElement.__lmSky = st;
+    st.refreshColors = () => { st.C = skyColors(); };
+    const resize = () => {
+      const r = box.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+      st.W = r.width || 700; st.H = r.height || 420;
+      cv.width = st.W * dpr; cv.height = st.H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      st.scale = Math.min(st.W / 560, (st.H - 40) / 440, 1.25);
+    };
+    resize();
+    st.ro = new ResizeObserver(() => resize()); st.ro.observe(box);
+    st.io = new IntersectionObserver((es) => { st.visible = es[0].isIntersecting; if (st.visible && !st.raf) st.raf = requestAnimationFrame(frame); }); st.io.observe(box);
+    // 세계 좌표 ↔ 화면 좌표 (회전 + 축척)
+    const toScreen = (x, y) => { const c = Math.cos(st.angle), s = Math.sin(st.angle); return { x: st.W / 2 + (x * c - y * s) * st.scale, y: st.H / 2 + 20 + (x * s + y * c) * st.scale }; };
+    const toWorld = (sx, sy) => { const c = Math.cos(-st.angle), s = Math.sin(-st.angle), x = (sx - st.W / 2) / st.scale, y = (sy - st.H / 2 - 20) / st.scale; return { x: x * c - y * s, y: x * s + y * c }; };
+    const alpha = (hex, a) => { const h = hex.replace('#', ''); if (!/^[0-9a-f]{3,6}$/i.test(h)) return hex; const n = parseInt(h.length === 3 ? h.replace(/./g, '$&$&') : h, 16); return `rgba(${n >> 16 & 255},${n >> 8 & 255},${n & 255},${a})`; };
+    const act = (n) => !UI.sub || subs[n.ci].id === UI.sub;
+    // 세부 분야를 고르면 그 무리가 위쪽으로 오도록 회전
+    st.target = null;
+    if (UI.sub && subs.length > 1) {
+      const ci = subs.findIndex((s) => s.id === UI.sub);
+      if (ci >= 0) { const base = Math.atan2(centers[ci].y, centers[ci].x); st.target = -Math.PI / 2 - base; }
+    }
+    function physics() {
+      const N = st.nodes;
+      for (const l of st.links) {
+        const a = N[l.a], b = N[l.b], dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy) || 0.01, f = (d - l.len) * 0.03;
+        const fx = (dx / d) * f, fy = (dy / d) * f;
+        a.vx += fx; a.vy += fy; b.vx -= fx; b.vy -= fy;
+      }
+      for (let i = 0; i < N.length; i++) for (let j = i + 1; j < N.length; j++) {
+        const a = N[i], b = N[j], dx = b.x - a.x, dy = b.y - a.y, d2 = dx * dx + dy * dy, min = a.r + b.r + 6;
+        if (d2 < min * min && d2 > 0.01) { const d = Math.sqrt(d2), f = (min - d) * 0.08; a.vx -= (dx / d) * f; a.vy -= (dy / d) * f; b.vx += (dx / d) * f; b.vy += (dy / d) * f; }
+      }
+      let energy = 0;
+      for (const n of N) {
+        if (st.drag && st.drag.node === n) { n.vx = n.vy = 0; continue; }
+        n.vx += (n.hx - n.x) * 0.012; n.vy += (n.hy - n.y) * 0.012;   // 제자리로 돌아가려는 힘
+        n.vx *= 0.82; n.vy *= 0.82; n.x += n.vx; n.y += n.vy;
+        energy += Math.abs(n.vx) + Math.abs(n.vy);
+      }
+      return energy;
+    }
+    function draw(t) {
+      const C = st.C, W = st.W, H = st.H;
       ctx.clearRect(0, 0, W, H);
-      const act = (n) => !UI.sub || subs[n.ci].id === UI.sub;
-      nodes.forEach((a, i) => nodes.forEach((b, j) => {
-        if (j <= i || a.ci !== b.ci) return;
-        if (Math.hypot(a.x - b.x, a.y - b.y) < 62) { ctx.strokeStyle = act(a) ? alpha(C.A, 0.22) : alpha(C.other, 0.12); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke(); }
-      }));
-      nodes.forEach((n) => {
-        const on = act(n), tw = on && !reduce ? 1 + Math.sin(t / 600 + n.x) * 0.08 : 1;
-        ctx.beginPath(); ctx.arc(n.x, n.y, n.r * tw, 0, Math.PI * 2);
-        ctx.fillStyle = n.p.yon ? (on ? C.A : alpha(C.A, 0.35)) : (on ? C.other : alpha(C.other, 0.35));
+      const P = st.nodes.map((n) => toScreen(n.x, n.y));
+      ctx.lineWidth = 1;
+      for (const l of st.links) {
+        const a = st.nodes[l.a], on = act(a);
+        ctx.strokeStyle = on ? alpha(C.A, 0.45) : alpha(C.other, 0.14);
+        ctx.beginPath(); ctx.moveTo(P[l.a].x, P[l.a].y); ctx.lineTo(P[l.b].x, P[l.b].y); ctx.stroke();
+      }
+      st.nodes.forEach((n, i) => {
+        const on = act(n), tw = on && !reduce ? 1 + Math.sin(t / 650 + n.hx) * 0.07 : 1, s = P[i];
+        n.sx = s.x; n.sy = s.y; n.sr = n.r * tw * Math.max(0.85, st.scale);
+        ctx.beginPath(); ctx.arc(s.x, s.y, n.sr, 0, Math.PI * 2);
+        ctx.fillStyle = n.p.yon ? (on ? C.A : alpha(C.A, 0.3)) : (on ? C.other : alpha(C.other, 0.28));
         ctx.fill();
         const isA = sameP(slots.A, n.p), isB = sameP(slots.B, n.p);
-        if (isA || isB || sky.hover === n) { ctx.lineWidth = 2; ctx.strokeStyle = isB ? C.B : isA ? C.A : C.ink; ctx.beginPath(); ctx.arc(n.x, n.y, n.r + 4, 0, Math.PI * 2); ctx.stroke(); }
+        if (isA || isB || st.hover === n || st.tipNode === n) { ctx.lineWidth = 2; ctx.strokeStyle = isB ? C.B : isA ? C.A : C.ink; ctx.beginPath(); ctx.arc(s.x, s.y, n.sr + 4, 0, Math.PI * 2); ctx.stroke(); ctx.lineWidth = 1; }
       });
-      ctx.font = '600 13px "IBM Plex Sans KR", sans-serif'; ctx.textAlign = 'center';
-      subs.forEach((s, i) => { ctx.fillStyle = !UI.sub || s.id === UI.sub ? C.ink : C.faint; ctx.fillText(s.ko || s.en, centers[i].x, Math.max(18, centers[i].y - Math.min(W, H) * 0.15 - 8)); });
-      if (!reduce && sky) sky.raf = requestAnimationFrame(draw);
-    };
-    sky.raf = requestAnimationFrame(draw);
+      // 무리 이름: 무리의 가장 위쪽 점 위에 (글자는 회전하지 않음)
+      ctx.font = '600 13px "IBM Plex Sans KR", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+      subs.forEach((s, ci) => {
+        const mem = st.nodes.filter((n) => n.ci === ci);
+        if (!mem.length) return;
+        const cx = mem.reduce((a, n) => a + n.sx, 0) / mem.length, top = Math.min(...mem.map((n) => n.sy - n.sr));
+        const on = !UI.sub || s.id === UI.sub, label = s.ko || s.en;
+        ctx.fillStyle = on ? C.ink : C.faint;
+        ctx.fillText(label, Math.min(Math.max(cx, 60), W - 60), Math.max(56, top - 10));
+      });
+      // 마우스를 올린 점: 학교 로고 + 이름
+      const h = st.hover && !st.drag ? st.hover : null;
+      if (h && st.tipNode !== h) {
+        const name = h.p.name, img = logoImg(h.p.school);
+        ctx.font = '600 13px "IBM Plex Sans KR", sans-serif';
+        const tw = ctx.measureText(name).width, pad = 8, lw = img ? 20 : 0, bw = tw + pad * 2 + lw + (img ? 6 : 0), bh = 28;
+        let bx = h.sx + h.sr + 8, by = h.sy - bh / 2;
+        if (bx + bw > W - 6) bx = h.sx - h.sr - 8 - bw;
+        by = Math.min(Math.max(by, 6), H - bh - 6);
+        ctx.fillStyle = C.surface; ctx.strokeStyle = C.line; ctx.beginPath();
+        if (ctx.roundRect) ctx.roundRect(bx, by, bw, bh, 8); else ctx.rect(bx, by, bw, bh);
+        ctx.fill(); ctx.stroke();
+        if (img) { ctx.save(); ctx.beginPath(); ctx.arc(bx + pad + 10, by + bh / 2, 10, 0, Math.PI * 2); ctx.fillStyle = '#fff'; ctx.fill(); ctx.clip(); ctx.drawImage(img, bx + pad + 1, by + bh / 2 - 9, 18, 18); ctx.restore(); }
+        ctx.fillStyle = C.ink; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+        ctx.fillText(name, bx + pad + lw + (img ? 6 : 0), by + bh / 2 + 1);
+      }
+      if (st.tipNode && tip) placeTip(st.tipNode);
+    }
+    function frame(t) {
+      st.raf = 0;
+      if (!sky || sky !== st) return;
+      const e = physics();
+      // 회전: 끌고 있지 않으면 관성으로 돌다가 멈춤. 고른 세부 분야가 있으면 그 무리를 위로
+      if (!st.drag) {
+        if (st.target != null) {
+          let d = st.target - st.angle; d = Math.atan2(Math.sin(d), Math.cos(d));
+          st.angle += d * (reduce ? 1 : 0.08);
+          if (Math.abs(d) < 0.002) st.target = null;
+        } else if (Math.abs(st.spin) > 0.0004) { st.angle += st.spin; st.spin *= 0.94; }
+        else st.spin = 0;
+      }
+      parentElement.__lmAngle = st.angle;
+      draw(t);
+      const moving = st.drag || e > 0.05 || st.spin !== 0 || st.target != null || !reduce;
+      if (st.visible && moving) st.raf = requestAnimationFrame(frame);
+    }
+    st.kick = () => { if (!st.raf) st.raf = requestAnimationFrame(frame); };
+    st.raf = requestAnimationFrame(frame);
+
     let tip = null;
+    function placeTip(n) {
+      if (!tip) return;
+      const W = st.W, H = st.H;
+      const x = n.sx > W / 2 ? Math.max(8, n.sx - n.sr - 226) : Math.min(n.sx + n.sr + 12, W - 222);
+      const y = Math.min(Math.max(n.sy - 44, 8), H - tip.offsetHeight - 8);
+      tip.style.left = x + 'px'; tip.style.top = y + 'px';
+    }
     const showTip = (n) => {
-      if (tip) tip.remove(); tip = null;
+      if (tip) tip.remove(); tip = null; st.tipNode = n || null;
       if (!n) return;
       tip = document.createElement('div'); tip.className = 'tip';
-      const x = n.x > W / 2 ? Math.max(8, n.x - 222) : Math.min(n.x + 16, W - 218);
-      const y = Math.min(Math.max(n.y - 40, 8), H - 140);
-      tip.style.left = x + 'px'; tip.style.top = y + 'px';
-      tip.innerHTML = `<b>${esc(n.p.name)}</b>${n.p.yon ? ' <span style="font-size:11px;color:var(--A)">연세대</span>' : ''}<div class="af">${esc(n.p.aff)}</div><div class="af">${esc(n.p.field)}, 최근 3년 논문 ${n.p.works}편</div>
+      tip.innerHTML = `<div class="tip-h">${badge(n.p.school, 'sm')}<div style="min-width:0"><b>${esc(n.p.name)}</b>${n.p.eng ? `<div class="en">${esc(n.p.eng)}</div>` : ''}</div></div><div class="af">${esc(n.p.aff)}${n.p.yon ? ' <span class="yon">연세대</span>' : ''}</div><div class="af">${esc(n.p.field)}, 최근 3년 논문 ${n.p.works}편</div>
         <div class="acts"><button class="add a" type="button" data-add="A" data-key="${esc(n.p.key)}">A에 담기</button><button class="add b" type="button" data-add="B" data-key="${esc(n.p.key)}">B에 담기</button></div>`;
       box.appendChild(tip);
+      placeTip(n);
+      st.kick();
+    };
+    const at = (e) => { const rr = cv.getBoundingClientRect(); return { x: e.clientX - rr.left, y: e.clientY - rr.top }; };
+    const hit = (x, y) => { let best = null, bd = 1e9; for (const n of st.nodes) { const d = Math.hypot(n.sx - x, n.sy - y); if (d < n.sr + 7 && d < bd) { best = n; bd = d; } } return best; };
+    cv.onpointerdown = (e) => {
+      const p = at(e), n = hit(p.x, p.y);
+      st.target = null;
+      st.drag = { node: n, sx: p.x, sy: p.y, moved: false, last: Math.atan2(p.y - st.H / 2 - 20, p.x - st.W / 2), t: performance.now() };
+      st.spin = 0;
+      cv.setPointerCapture(e.pointerId);
+      cv.style.cursor = 'grabbing';
+      st.kick();
     };
     cv.onpointermove = (e) => {
-      const rr = cv.getBoundingClientRect(), x = e.clientX - rr.left, y = e.clientY - rr.top;
-      const h = nodes.find((n) => Math.hypot(n.x - x, n.y - y) < n.r + 5) || null;
-      if (h !== sky.hover) { sky.hover = h; cv.style.cursor = h ? 'pointer' : 'default'; if (reduce) draw(0); }
+      const p = at(e);
+      if (st.drag) {
+        const d = st.drag;
+        if (!d.moved && Math.hypot(p.x - d.sx, p.y - d.sy) > 4) d.moved = true;
+        if (!d.moved) return;
+        if (tip) showTip(null);
+        if (d.node) { const w = toWorld(p.x, p.y); d.node.x = w.x; d.node.y = w.y; }
+        else {
+          const a = Math.atan2(p.y - st.H / 2 - 20, p.x - st.W / 2);
+          let da = a - d.last; da = Math.atan2(Math.sin(da), Math.cos(da));
+          st.angle += da; d.last = a;
+          const now = performance.now(); st.spin = reduce ? 0 : da * Math.min(1, 16 / Math.max(1, now - d.t)); d.t = now;
+        }
+        st.kick();
+        return;
+      }
+      const h = hit(p.x, p.y);
+      if (h !== st.hover) { st.hover = h; cv.style.cursor = h ? 'pointer' : 'grab'; st.kick(); }
     };
-    cv.onclick = () => showTip(sky && sky.hover);
+    const end = (e) => {
+      const d = st.drag; st.drag = null;
+      cv.style.cursor = st.hover ? 'pointer' : 'grab';
+      if (d && !d.moved) showTip(d.node && d.node !== st.tipNode ? d.node : null);   // 끌지 않고 눌렀으면: 점 → 정보, 빈 곳 → 닫기
+      st.kick();
+    };
+    cv.onpointerup = end; cv.onpointercancel = (e) => { st.drag = null; st.kick(); };
+    cv.onpointerleave = () => { if (!st.drag && st.hover) { st.hover = null; st.kick(); } };
+    cv.style.cursor = 'grab';
+    const reset = box.querySelector('[data-act="sky-reset"]');
+    if (reset) reset.onclick = () => { st.target = 0; st.spin = 0; st.nodes.forEach((n) => { n.vx += (n.hx - n.x) * 0.2; n.vy += (n.hy - n.y) * 0.2; }); showTip(null); st.kick(); };
   }
 
   // ---------- 전체 그리기 ----------
@@ -498,8 +708,8 @@ export default function (component) {
       if (act) {
         const a = act.dataset.act;
         if (a === 'search') S().doSearch();
-        else if (a === 'help') { UI.help = true; root.querySelector('.scrim').hidden = false; }
-        else if (a === 'close') { UI.help = false; root.querySelector('.scrim').hidden = true; }
+        else if (a === 'help') { UI.help = true; root.__helpFrom = act; root.querySelector('.scrim').hidden = false; root.querySelector('.modal .close').focus(); }
+        else if (a === 'close') { UI.help = false; root.querySelector('.scrim').hidden = true; if (root.__helpFrom) root.__helpFrom.focus(); }
         else if (a === 'prev') { UI.idx = Math.max(0, UI.idx - 1); S().renderDept(); }
         else if (a === 'next') { UI.idx = UI.idx + 1; S().renderDept(); }
         else if (a === 'all') { UI.showAll = !UI.showAll; S().renderFields(); }
@@ -518,7 +728,9 @@ export default function (component) {
       el.style.setProperty('--mx', x * 100 + '%'); el.style.setProperty('--my', y * 100 + '%');
     });
     root.addEventListener('pointerout', (e) => { const el = e.target.closest && e.target.closest('.pc'); if (el && !el.contains(e.relatedTarget)) el.style.transform = ''; });
-    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && UI.help) { UI.help = false; root.querySelector('.scrim').hidden = true; } });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && UI.help) { UI.help = false; root.querySelector('.scrim').hidden = true; if (root.__helpFrom) root.__helpFrom.focus(); } });
+    // 이용 안내 창이 열려 있으면 Tab 키 이동을 창 안에서만 (창 안의 버튼은 닫기 하나뿐)
+    root.addEventListener('keydown', (e) => { if (e.key === 'Tab' && UI.help) { e.preventDefault(); root.querySelector('.modal .close').focus(); } });
   }
 
   // 웹폰트가 늦게 도착하거나 창 크기가 바뀌면 카드 이름과 태그를 다시 맞춤
@@ -536,5 +748,5 @@ export default function (component) {
   if (input.value !== UI.q) input.value = UI.q;
   renderModes(); renderSlots(); renderDrop(); renderDept(); renderFields();
   $('.scrim').hidden = !UI.help;
-  return () => stopSky();
+  return () => { stopSky(); clearInterval(root.__themeTimer); };
 }

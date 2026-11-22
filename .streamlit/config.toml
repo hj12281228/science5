@@ -1,0 +1,18 @@
+# LABMATCH 테마: 메뉴(⋮ → Light/Dark/System)에서 바꿀 수 있고, 두 테마 모두 팀 색에 맞춤
+# 라이트 A 세이지 #93BAB5 · B 머스터드 #F5CB71 / 다크 A 라벤더 #9989F1 · B 연두 #B5DC8A
+
+[theme.light]
+base = "light"
+primaryColor = "#3B6862"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F2F4F7"
+textColor = "#1C2430"
+borderColor = "#E3E6EB"
+
+[theme.dark]
+base = "dark"
+primaryColor = "#9989F1"
+backgroundColor = "#0C0C0F"
+secondaryBackgroundColor = "#141418"
+textColor = "#F3F2EE"
+borderColor = "#2B2B33"

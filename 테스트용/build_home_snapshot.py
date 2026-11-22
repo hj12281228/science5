@@ -24,6 +24,8 @@ from pathlib import Path
 
 import requests
 
+from korean_names import korean_name
+
 HERE = Path(__file__).parent
 CACHE = HERE / ".openalex_cache"
 BASE = "https://api.openalex.org"
@@ -177,14 +179,15 @@ def main():
                 ids = [aid for aid, _ in top if aid.startswith("A")]
                 if ids:
                     info = get("/authors", filter=f"openalex:{'|'.join(ids)},last_known_institutions.country_code:kr",
-                               select="id,display_name,last_known_institutions", **{"per-page": 50})["results"]
+                               select="id,display_name,display_name_alternatives,last_known_institutions", **{"per-page": 50})["results"]
                     keep = {short(a["id"]): a for a in info}
                     for aid, g2 in top:
                         a = keep.get(aid)
                         if not a:
                             continue
                         inst = next((x.get("display_name") for x in (a.get("last_known_institutions") or []) if x.get("country_code") in ("KR", "kr")), None)
-                        sub["researchers"].append({"oa_id": "https://openalex.org/" + aid, "name": a["display_name"], "inst": inst, "works": g2["count"]})
+                        sub["researchers"].append({"oa_id": "https://openalex.org/" + aid, "name": a["display_name"],
+                                                   "ko": korean_name(a["display_name"], a.get("display_name_alternatives"))[0], "inst": inst, "works": g2["count"]})
                         if len(sub["researchers"]) >= args.per_subfield:
                             break
             subs.append(sub)
