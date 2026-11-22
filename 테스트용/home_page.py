@@ -63,14 +63,10 @@ def yonsei_list(db_tree, profiles=None):
 
 def render_home(db_tree, slots, search, notice=None, profiles=None):
     """첫 화면을 그리고, 사용자가 방금 한 행동(event)을 돌려줍니다. 없으면 None."""
-    from compare_sheets import P, use_palette
-    try:
-        dark = st.context.theme.type == "dark"
-    except Exception:
-        dark = False
-    use_palette(dark)
-    if dark:
-        st.html('<style>.stApp,[data-testid="stHeader"]{background:#0C0C0F}</style>')
+    from compare_sheets import LIGHT, DARK
+    from theme import is_dark
+    dark = is_dark()
+    pal = lambda c: {"A": c["A"], "B": c["B"], "tA": c["TA"], "tB": c["TB"], "onA": c["ON_A"], "onB": c["ON_B"]}
     comp = _home_component()
     result = comp(
         data={
@@ -80,8 +76,9 @@ def render_home(db_tree, slots, search, notice=None, profiles=None):
             "search": search,
             "notice": notice,
             "logos": load_logos(),
+            # 처음 그릴 때의 테마. 화면에서 테마를 바꾸면 컴포넌트가 직접 알아채고 아래 두 색 조합 중에서 고름
             "theme": "dark" if dark else "light",
-            "colors": {"A": P["A"], "B": P["B"], "tA": P["TA"], "tB": P["TB"], "onA": P["ON_A"], "onB": P["ON_B"]},
+            "palettes": {"light": pal(LIGHT), "dark": pal({**LIGHT, **DARK})},
         },
         key="labmatch_home",
         on_event_change=lambda: None,

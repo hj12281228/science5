@@ -6,6 +6,8 @@ import requests
 import streamlit as st
 
 from home_page import render_home
+from theme import theme_watch
+from korean_names import korean_name
 from build_home_snapshot import SUBFIELD_KO
 
 # 조원들이 만든 5개의 지표 화면은 compare_page에서 불러옵니다.
@@ -80,22 +82,28 @@ def _has_hangul(text):
 
 def korean_display_name(query, cand):
     """검색 결과를 한글 이름으로 보여주기 위한 이름 고르기
-    1) OpenAlex 이름 표기 중 한글이 있으면 그것 (검색어와 같은 것을 먼저)
-    2) 없으면, 한글로 검색한 경우 검색어
-    3) 둘 다 아니면 None (영문 그대로 표시)"""
+    1) OpenAlex 이름 표기 중 한글이 검색어와 같으면 그것
+    2) 한글로 검색한 경우 검색어
+    3) OpenAlex 한글 표기 중 영문 이름과 소리가 맞는 것, 없으면 로마자를 한글로 바꾼 것 (korean_names.py)
+    4) 다 아니면 None (영문 그대로 표시)"""
     alts = cand.get("alt_ko") or []
     if query in alts:
         return query
-    if alts:
-        return alts[0]
-    return query if _has_hangul(query) else None
+    if _has_hangul(query):
+        return query
+    return korean_name(cand.get("name") or "", alts)[0]
+
+
+YONSEI_OA_ID = "I193775966"  # OpenAlex의 연세대학교 기관 ID
 
 
 @st.cache_data(show_spinner=False, ttl=3600)
-def search_author_candidates(query_name):
+def search_author_candidates(query_name, yonsei_only=False):
+    """OpenAlex 저자 검색 (yonsei_only=True면 연세대 소속 이력이 있는 사람만)"""
+    extra = {"filter": f"affiliations.institution.id:{YONSEI_OA_ID}"} if yonsei_only else {}
     resp = requests.get(
         "https://api.openalex.org/authors",
-        params={"search": query_name, "per-page": 5, **_openalex_params()},
+        params={"search": query_name, "per-page": 5, **extra, **_openalex_params()},
         timeout=20,
     )
     resp.raise_for_status()  # 사용량 한도(429) 등 실패한 응답은 캐시에 남기지 않음
@@ -274,12 +282,15 @@ def build_txt_report(data_a, data_b, summaries, q_a, q_b):
 # 기본 페이지 설정 및 Session State 초기화
 # =========================================================
 st.set_page_config(page_title="LABMATCH", layout="wide")
+# 라이트/다크: 브라우저의 실제 테마를 확인해서 색을 고름 (메뉴에서 테마를 바꿔도 바로 따라감)
+_DARK = theme_watch()
+_BTN = ("#9989F1", "#8A78EE", "#0B0B0D") if _DARK else ("#93BAB5", "#7FA9A3", "#141414")
 st.markdown(
-    """<style>
-    /* 비교 화면 버튼: 팀 공통 톤 (A 세이지) */
-    div.stButton > button[kind="primary"] * { color:#141414; }
-    div.stButton > button[kind="primary"] { background:#93BAB5; border-color:#93BAB5; color:#141414; }
-    div.stButton > button[kind="primary"]:hover { background:#7FA9A3; border-color:#7FA9A3; color:#141414; }
+    f"""<style>
+    /* 비교 화면 버튼: 팀 공통 톤 (라이트 A 세이지 / 다크 A 라벤더) */
+    div.stButton > button[kind="primary"] * {{ color:{_BTN[2]}; }}
+    div.stButton > button[kind="primary"] {{ background:{_BTN[0]}; border-color:{_BTN[0]}; color:{_BTN[2]}; }}
+    div.stButton > button[kind="primary"]:hover {{ background:{_BTN[1]}; border-color:{_BTN[1]}; color:{_BTN[2]}; }}
     </style>""",
     unsafe_allow_html=True
 )
@@ -317,7 +328,7 @@ def _fill_yonsei_works(person):
     if not person or person.get("oa_id") or person.get("works") is not None or not person.get("eng"):
         return person
     try:
-        hit = next((c for c in search_author_candidates(person["eng"]) if "Yonsei" in (c.get("institution") or "")), None)
+        hit = _yonsei_pick(person["eng"], person.get("dept"))
     except Exception:
         return person
     if hit:
@@ -329,11 +340,18 @@ def _fill_yonsei_works(person):
 _PROFILE_CACHE = {}  # 영문 이름 → {"works", "tags"} (성공한 것만 저장, 실패하면 다음 접속 때 다시 시도)
 
 
-def _yonsei_profile(eng):
+def _yonsei_pick(eng, dept=None):
+    """연세대 교수님에 가장 맞는 OpenAlex 저자 (본인확인 화면에서 미리 골라 두는 사람과 같음). 없으면 None"""
+    cands = _candidates_for({"name": eng, "eng": eng, "school": "연세대", "dept": dept}) if dept else \
+        [c for c in search_author_candidates(eng) if "Yonsei" in (c.get("institution") or "")]
+    return cands[0] if cands else None
+
+
+def _yonsei_profile(eng, dept=None):
     """연세대 교수님 한 분의 OpenAlex 전체 논문 수와 주요 연구 분야(세부 분야 최대 3개)"""
     if eng in _PROFILE_CACHE:
         return _PROFILE_CACHE[eng]
-    hit = next((c for c in search_author_candidates(eng) if "Yonsei" in (c.get("institution") or "")), None)
+    hit = _yonsei_pick(eng, dept)
     prof = {"works": hit.get("works_count") or 0, "tags": [SUBFIELD_KO.get(t, t) for t in hit.get("tags", [])]} if hit else {}
     _PROFILE_CACHE[eng] = prof
     return prof
@@ -343,12 +361,12 @@ def yonsei_profiles(db_tree):
     """학과 둘러보기 카드에 붙일 연구 분야·논문 수. 사용량 한도(429)에 걸리면 받은 만큼만 씀"""
     out = {}
     for depts in db_tree.values():
-        for profs in depts.values():
+        for dept, profs in depts.items():
             for p in profs:
                 if not p.get("eng"):
                     continue
                 try:
-                    out[p["name"]] = _yonsei_profile(p["eng"])
+                    out[p["name"]] = _yonsei_profile(p["eng"], dept)
                 except Exception:
                     return out  # 한도에 걸렸으면 나머지는 다음에
     return out
@@ -364,7 +382,22 @@ def _candidates_for(person):
             "works_count": person.get("works") or 0,
         }]
     query = person.get("eng") or PROF_NAME_MAP.get(person["name"], person["name"])
-    return _yonsei_first(search_author_candidates(query))
+    if person.get("school") != "연세대" or not person.get("dept"):
+        return _yonsei_first(search_author_candidates(query))
+    # 학과 목록에서 담은 연세대 교수님: 연세대 소속 이력이 있는 사람을 먼저 찾고,
+    # 연구 분야가 학과와 맞는 사람 → 최근 소속이 연세대인 사람 → 논문이 많은 사람 순으로 고름
+    try:
+        yon = search_author_candidates(query, yonsei_only=True)
+    except Exception:
+        yon = []
+    seen = {c["id"] for c in yon}
+    pool = yon + [c for c in search_author_candidates(query) if c["id"] not in seen]
+    dept = person["dept"].removesuffix("학부").removesuffix("과")
+    def score(c):
+        tags_ko = [SUBFIELD_KO.get(t, t) for t in c.get("tags", [])]
+        fit = any(t and (t in dept or dept in t) for t in tags_ko)
+        return (not fit, "Yonsei" not in (c.get("institution") or ""), c["id"] not in seen, -(c.get("works_count") or 0))
+    return sorted(pool, key=score)[:5]
 
 
 if st.session_state.step == 1:

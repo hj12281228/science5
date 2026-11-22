@@ -24,7 +24,7 @@ esc = html.escape
 # ---------------------------------------------------------------- 색 (라이트 / 다크)
 # 라이트: 세이지 #93BAB5 · 머스터드 #F5CB71 / 다크: 라벤더 #9989F1 · 연두 #B5DC8A (확정)
 # TA·TB는 글씨용 색. 라이트 두 색은 흰 바탕 글씨로 쓰기엔 옅어서 진하게 씀.
-LIGHT = dict(A="#93BAB5", B="#F5CB71", TA="#457670", TB="#946600", INK="#141414", MU="#8A877F", HA="#9A968D",
+LIGHT = dict(A="#93BAB5", B="#F5CB71", TA="#3B6862", TB="#946600", INK="#141414", MU="#8A877F", HA="#9A968D",
              ON_A="#141414", ON_B="#141414",
              AT="#E4EEED", BT="#FDF3DD", SAND="#EAE7E0", GRID="#D3CFC5", PAPER="#FFFFFF", ON_BLK="#FFFFFF",
              BUB_A="#AECBC8", BUB_C="#C9C5BC", BUB_B="#F8D894", BUB_TXT="#141414")
@@ -90,7 +90,7 @@ QUESTIONS = [
 CSS = """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
-.lm{--paper:#FBFAF7;--ink:#141414;--mute:#8A877F;--line:#DCD8CF;--A:#93BAB5;--B:#F5CB71;--tA:#457670;--tB:#946600;--At:#E4EEED;--Bt:#FDF3DD;--sand:#EAE7E0;
+.lm{--paper:#FBFAF7;--ink:#141414;--mute:#8A877F;--line:#DCD8CF;--A:#93BAB5;--B:#F5CB71;--tA:#3B6862;--tB:#946600;--At:#E4EEED;--Bt:#FDF3DD;--sand:#EAE7E0;
  --disp:"Space Grotesk","IBM Plex Sans KR",sans-serif;--kr:"IBM Plex Sans KR","Apple SD Gothic Neo",sans-serif;--mono:"IBM Plex Mono",ui-monospace,monospace;
  font-family:var(--kr);color:var(--ink);line-height:1.35}
 .lm *{box-sizing:border-box}

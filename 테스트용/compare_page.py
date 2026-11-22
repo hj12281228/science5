@@ -13,6 +13,9 @@ import html
 
 import streamlit as st
 
+from theme import is_dark
+from korean_names import korean_name
+
 from home_page import load_logos
 from practice1 import render_toptier
 from practice2 import render_industry_collab
@@ -37,7 +40,7 @@ UNI_KO = {
 CSS = """
 <style>
 .lmc-banner{font-size:12.5px;color:#8a5a00;background:#FFF6E0;border:1px solid #F0DDAE;border-radius:8px;padding:6px 10px;margin-bottom:10px}
-.lmc-steps{display:flex;gap:8px;align-items:center;font-size:13px;color:#98A2B0;margin:0 0 10px}
+.lmc-steps{display:flex;gap:8px;align-items:center;font-size:13px;color:#6B7584;margin:0 0 10px}
 .lmc-steps b{color:#1C2430}
 .lmc-steps i{font-style:normal;color:#C9CFD8}
 .lmc-bar{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:12px;align-items:center}
@@ -48,7 +51,7 @@ CSS = """
 .lmc-pc b{display:block;font-size:18px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lmc-pc span.sub{display:block;font-size:12.5px;opacity:.82;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lmc-pc .meta{min-width:0}
-.lmc-badge{width:40px;height:40px;flex:none;border-radius:50%;background:#fff;display:grid;place-items:center;overflow:hidden;font-weight:700;font-size:13px;color:#457670}
+.lmc-badge{width:40px;height:40px;flex:none;border-radius:50%;background:#fff;display:grid;place-items:center;overflow:hidden;font-weight:700;font-size:13px;color:#3B6862}
 .lmc-badge img{width:34px;height:34px;object-fit:contain}
 .lmc-vs{width:34px;height:34px;border-radius:50%;border:1px solid #E3E6EB;display:grid;place-items:center;font-weight:700;color:#5F6B7A;font-size:12px;background:#fff}
 .lmc-h{font-size:21px;font-weight:700;margin:6px 0 2px;letter-spacing:-.01em}
@@ -118,6 +121,14 @@ def render_bar(slots, step, on_swap):
 
 
 # ---------------------------------------------------------------- 확인(동명이인)
+def _ko_name(c):
+    """후보 이름: 한국식 이름이면 한글을 크게, 영문을 작게"""
+    ko = c.get("ko") or korean_name(c.get("name") or "", c.get("alt_ko"))[0]
+    if not ko:
+        return esc(c.get("name") or "")
+    return f'{esc(ko)} <span style="font-weight:400;font-size:12.5px;opacity:.7">{esc(c.get("name") or "")}</span>'
+
+
 def render_confirm(slots, cands, on_swap, on_research):
     """cands = {"A": [...], "B": [...]} → 고른 후보 id를 {"A": id, "B": id}로 돌려줌 (아직 다 못 고르면 None 포함)"""
     render_bar(slots, 1, on_swap)
@@ -147,7 +158,7 @@ def render_confirm(slots, cands, on_swap, on_research):
                 tags = ", ".join(c.get("tags_ko") or [])
                 st.markdown(
                     f'<div class="lmc-cand {"on" if on else ""}" style="--c:{color};--soft:{soft}">{badge_html(school)}'
-                    f'<div style="min-width:0"><div class="nm">{esc(c["name"])}</div><div class="af">{esc(c.get("institution") or "")} · 논문 {c.get("works_count", 0)}편</div>'
+                    f'<div style="min-width:0"><div class="nm">{_ko_name(c)}</div><div class="af">{esc(c.get("institution") or "")} · 논문 {c.get("works_count", 0)}편</div>'
                     f'{f"<div class=tg>{esc(tags)}</div>" if tags else ""}</div></div>', unsafe_allow_html=True)
                 if st.button("✓ 이 분이에요" if on else "이 분으로 고르기", key=f"c_{slot}_{i}", use_container_width=True, type="primary" if on else "secondary"):
                     st.session_state[key] = c["id"]
@@ -163,7 +174,7 @@ TOP_CSS = """
 /* 비교 화면 상단 버튼: 테두리만 있는 알약 */
 .st-key-lm_top div.stButton > button{min-height:32px;height:32px;padding:0 14px;font-size:13px;border-radius:999px;background:transparent;border:1px solid #141414;color:#141414}
 .st-key-lm_top div.stButton > button:hover{background:#141414;color:#FBFAF7}
-.st-key-lm_top .st-key-lm_swapA button{border-color:#93BAB5;color:#457670}
+.st-key-lm_top .st-key-lm_swapA button{border-color:#93BAB5;color:#3B6862}
 .st-key-lm_top .st-key-lm_swapB button{border-color:#F5CB71;color:#946600}
 .lm-logo-word{font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:20px;letter-spacing:.04em;padding-top:4px}
 .st-key-lm_top{border-bottom:1px solid #141414;padding-bottom:10px}
@@ -190,19 +201,10 @@ TOP_CSS = """
 """
 
 
-def is_dark():
-    """Streamlit 테마(설정의 Light/Dark 또는 시스템 설정)가 다크인지"""
-    try:
-        return st.context.theme.type == "dark"
-    except Exception:
-        return False
-
-
 def dark_css():
     """다크모드: 처음부터 다크로 디자인한 것처럼 바탕·카드·버튼 색을 바꿈 (A·B 색은 다크용 조합)"""
     a, b, ona, onb = P["A"], P["B"], P["ON_A"], P["ON_B"]
     return f"""<style>
-.stApp,[data-testid="stHeader"]{{background:#0C0C0F}}
 .lmc-pc.A{{background:{a};color:{ona}}}.lmc-pc.B{{background:{b};color:{onb}}}
 .lmc-vs{{background:#141418;border-color:#2B2B33;color:#B7B6BE}}
 .lmc-steps{{color:#6B6A73}}.lmc-steps b{{color:#F3F2EE}}.lmc-steps i{{color:#3A3A42}}
