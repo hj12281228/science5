@@ -177,18 +177,39 @@ export default function (component) {
     el.style.webkitLineClamp = String(lines);
     el.style.overflowWrap = lines === 1 ? 'normal' : 'anywhere';
   }
-  // 태그가 한 줄을 넘으면 뒤에서부터 접어서 +n으로. 남은 태그 하나도 길면 말줄임
-  function fitTags(box) {
+  // 태그가 한 줄을 넘으면 뒤에서부터 접어서 +n으로. 남은 태그 하나도 길면 말줄임(마우스를 올리면 전체 이름)
+  function fitTags(box, sel = '.tag', moreCls = 'tag more') {
+    if (!box) return;
     box.classList.add('measure');
-    const all = Array.from(box.querySelectorAll('.tag:not(.more)'));
+    const all = Array.from(box.querySelectorAll(sel + ':not(.more)'));
+    all.forEach((t) => (t.title = t.textContent));
     let more = box.querySelector('.more'), hidden = more ? +more.textContent.slice(1) : 0;
     while ((box.scrollHeight > box.clientHeight + 1 || box.scrollWidth > box.clientWidth + 1) && all.length > 1) {
-      all.pop().remove(); hidden++;
-      if (!more) { more = document.createElement('span'); more.className = 'tag more'; box.appendChild(more); }
+      const gone = all.pop(); gone.remove(); hidden++;
+      if (!more) { more = document.createElement('span'); more.className = moreCls; box.appendChild(more); }
       more.textContent = '+' + hidden;
+      more.title = [gone.textContent, more.title].filter(Boolean).join(', ');
     }
-    all.forEach((t) => (t.title = t.textContent));
     box.classList.remove('measure');
+  }
+  // 카드 안전장치: 내용이 카드 높이를 넘으면 덜 중요한 것부터 줄임 (태그 → 영문 이름 → 분야 줄 전체)
+  function fitCard(card, tagsSel, tagSel, moreCls) {
+    const over = () => card.scrollHeight > card.clientHeight + 1;
+    if (!over()) return;
+    const box = card.querySelector(tagsSel);
+    if (box) {
+      const tags = Array.from(box.querySelectorAll(tagSel + ':not(.more)'));
+      let more = box.querySelector('.more'), hidden = more ? +more.textContent.slice(1) : 0;
+      while (over() && tags.length > 1) {
+        const gone = tags.pop(); gone.remove(); hidden++;
+        if (!more) { more = document.createElement('span'); more.className = moreCls; box.appendChild(more); }
+        more.textContent = '+' + hidden;
+        more.title = [gone.textContent, more.title].filter(Boolean).join(', ');
+      }
+    }
+    const pe = card.querySelector('.pe');
+    if (over() && pe) pe.style.display = 'none';
+    if (over()) card.querySelectorAll('.flabel,' + tagsSel).forEach((n) => (n.style.display = 'none'));
   }
   function renderSlots() {
     ['A', 'B'].forEach((k) => {
@@ -196,7 +217,7 @@ export default function (component) {
       const p = slots[k];
       el.className = 'pc ' + k + (p ? ' filled' : ' empty') + (UI.popSlot === k ? ' pop' : '');
       el.innerHTML = cardHTML(p, k);
-      if (p) { fitName(el.querySelector('.pn')); fitTags(el.querySelector('.tags')); }
+      if (p) { fitName(el.querySelector('.pn')); fitTags(el.querySelector('.tags')); fitCard(el, '.tags', '.tag', 'tag more'); }
     });
     UI.popSlot = null;
     const n = (slots.A ? 1 : 0) + (slots.B ? 1 : 0);
@@ -279,11 +300,13 @@ export default function (component) {
       el.innerHTML = `<div class="eyebrow">${esc(p.col)}</div><div class="pn">${esc(p.name)}</div><div class="pe">${esc(p.eng)}</div>
         <div class="pd">${esc(p.dept)}</div>
         <div class="flabel">연구 분야</div>
-        <div class="ftags">${(p.tags || []).length ? p.tags.slice(0, 3).map((t) => `<span>${esc(t)}</span>`).join('') : '<em>논문 데이터를 받으면 표시돼요</em>'}</div>
+        <div class="ftags">${(p.tags || []).length ? p.tags.slice(0, 3).map((t) => `<span>${esc(t)}</span>`).join('') + (p.tags.length > 3 ? `<span class="more">+${p.tags.length - 3}</span>` : '') : '<em>논문 데이터를 받으면 표시돼요</em>'}</div>
         ${p.works != null ? `<div class="fw"><span>전체 논문</span><b>${p.works}<small> 편</small></b></div>` : ''}
         <div class="acts"><button class="add a ${onA ? 'on' : ''}" type="button" data-add="A" data-key="${esc(p.key)}">${onA ? 'A에 담김' : 'A에 담기'}</button><button class="add b ${onB ? 'on' : ''}" type="button" data-add="B" data-key="${esc(p.key)}">${onB ? 'B에 담김' : 'B에 담기'}</button></div>`;
       el.dataset.idx = i;
       st.appendChild(el);
+      fitTags(el.querySelector('.ftags'), 'span', 'more');
+      fitCard(el, '.ftags', 'span', 'more');
     });
     $('.dots').innerHTML = list.map((_, i) => `<i class="${i === UI.idx ? 'on' : ''}"></i>`).join('');
     $('.nav.l').disabled = UI.idx === 0;
@@ -499,7 +522,7 @@ export default function (component) {
   }
 
   // 웹폰트가 늦게 도착하거나 창 크기가 바뀌면 카드 이름과 태그를 다시 맞춤
-  const refit = () => root.querySelectorAll('.pc.filled').forEach((el) => { fitName(el.querySelector('.pn')); fitTags(el.querySelector('.tags')); });
+  const refit = () => root.querySelectorAll('.pc.filled').forEach((el) => { fitName(el.querySelector('.pn')); fitTags(el.querySelector('.tags')); fitCard(el, '.tags', '.tag', 'tag more'); });
   root.__lm.refit = refit;
   if (!root.__fitBound) {
     root.__fitBound = true;
