@@ -105,12 +105,12 @@ CSS = """
 .lm-names{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:end;gap:24px;margin:12px 0 26px}
 .lm-nm{font-weight:700;font-size:clamp(40px,6.4vw,92px);line-height:.98;letter-spacing:-.04em;min-width:0;overflow-wrap:anywhere;word-break:keep-all}
 .lm-nm.A{color:var(--nmA,var(--ink))}.lm-nm.B{color:var(--nmB,var(--ink));text-align:right}
-.lm-nm .nm{background:linear-gradient(transparent 58%,var(--bandA) 58%,var(--bandA) 92%,transparent 92%);padding:0 .06em;-webkit-box-decoration-break:clone;box-decoration-break:clone}
-.lm-nm.B .nm{background:linear-gradient(transparent 58%,var(--bandB) 58%,var(--bandB) 92%,transparent 92%)}
+.lm-nm .nm{background:linear-gradient(transparent 60%,var(--bandA) 60%,var(--bandA) 86%,transparent 86%);padding:0 .06em;-webkit-box-decoration-break:clone;box-decoration-break:clone}
+.lm-nm.B .nm{background:linear-gradient(transparent 60%,var(--bandB) 60%,var(--bandB) 86%,transparent 86%)}
 .lm-nm small{display:flex;align-items:center;gap:10px;font-size:15px;font-weight:500;letter-spacing:0;color:var(--ink);margin-bottom:12px;min-width:0}
 .lm-nm small span.t{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lm-nm.B small{justify-content:flex-end}
-.lm-nm .eng{display:block;font-size:15px;font-weight:400;letter-spacing:0;color:var(--mute);margin-top:6px}
+.lm-nm .eng{display:block;font-size:15px;font-weight:400;letter-spacing:0;color:var(--mute);margin-top:12px}
 .lm-logo{width:34px;height:34px;flex:none;border-radius:50%;background:#fff;display:grid;place-items:center;overflow:hidden;border:1px solid var(--line);font-size:12px;font-weight:700;color:var(--tA)}
 .lm-logo img{width:29px;height:29px;object-fit:contain}
 .lm-vs{font-family:var(--disp);font-weight:300;font-size:40px;color:var(--mute);padding-bottom:10px}
