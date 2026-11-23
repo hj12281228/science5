@@ -26,6 +26,22 @@ from compare_sheets import CSS as SHEET_CSS, QUESTIONS, collect, headline, brief
 
 A_COLOR, B_COLOR = "#93BAB5", "#F5CB71"
 
+# 큰 HTML 조각을 그대로 붙이는 가벼운 칸.
+# st.markdown은 큰 HTML을 마크다운으로 파싱하느라 휴대폰에서 느렸고, st.html은 SVG 그래프를 지워 버려서 이 방식을 씀.
+# 페이지 CSS가 그대로 먹도록 isolate_styles=False, 같은 내용이면 다시 그리지 않음(열어 둔 장이 닫히지 않게).
+_RAW = st.components.v2.component(
+    "lm_raw_html",
+    js="""export default function({ parentElement, data }) {
+  const h = (data && data.html) || "";
+  if (parentElement.__lmHtml !== h) { parentElement.innerHTML = h; parentElement.__lmHtml = h; }
+}""",
+    isolate_styles=False,
+)
+
+
+def raw_html(markup, key):
+    _RAW(data={"html": markup}, key=key)
+
 UNI_KO = {
     "Yonsei University": "연세대", "Seoul National University": "서울대", "Korea Advanced Institute of Science and Technology": "KAIST",
     "Pohang University of Science and Technology": "POSTECH", "Korea University": "고려대", "Sungkyunkwan University": "성균관대",
@@ -178,6 +194,12 @@ TOP_CSS = """
 .st-key-lm_top .st-key-lm_swapB button{border-color:#F5CB71;color:#946600}
 .lm-logo-word{font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:20px;letter-spacing:.04em;padding-top:4px}
 .st-key-lm_top{border-bottom:1px solid #141414;padding-bottom:10px}
+/* 비교 화면 바깥 여백: 화면 높이에 맞춘 너비(장 하나가 약 16:9 슬라이드처럼 한 화면에 들어오게), 넓은 화면에선 가운데 */
+@media (min-width:1101px){
+ .stMainBlockContainer:has(.st-key-lm_tabs){max-width:clamp(1040px,calc((100vh - 60px) * 1.9),1320px);padding-left:48px;padding-right:48px;padding-top:4.5rem}
+}
+@media (min-width:701px) and (max-width:1100px){.stMainBlockContainer:has(.st-key-lm_tabs){padding-left:40px;padding-right:40px}}
+@media (max-width:700px){.stMainBlockContainer:has(.st-key-lm_tabs){padding-left:18px;padding-right:18px}}
 /* 탭: 작은 대문자 라벨 */
 .st-key-lm_tabs [data-baseweb="tab-list"]{gap:22px;border-bottom:1px solid #141414}
 .st-key-lm_tabs [data-baseweb="tab"] p{font-family:"IBM Plex Mono",monospace;font-size:13px;letter-spacing:.06em}
@@ -288,7 +310,7 @@ def render_compare(slots, data_a, data_b, on_swap, build_txt_report, demo=False)
             on_swap("B")
 
     # 큰 이름 A vs B
-    st.markdown(names_html(pa, pb, _logo(pa["school"]), _logo(pb["school"])), unsafe_allow_html=True)
+    raw_html(names_html(pa, pb, _logo(pa["school"]), _logo(pb["school"])), "lm_names")
 
     # 나에게 중요한 것 → 요약 칸 색칠, 브리프·지표 순서
     st.pills("나에게 중요한 것", [q["key"] for q in QUESTIONS], selection_mode="multi", key="lmc_pref",
@@ -299,53 +321,67 @@ def render_compare(slots, data_a, data_b, on_swap, build_txt_report, demo=False)
     summaries = {}
     title = f"{pa['name']} vs {pb['name']}"
     with st.container(key="lm_tabs"):
-        t1, t2, t3 = st.tabs(["01  요약", "02  지표", "03  저장"])
+        # 선택한 탭만 실행 (on_change="rerun"): 휴대폰에서 세 탭을 한꺼번에 그리느라 느려지던 문제
+        t1, t2, t3 = st.tabs(["01  요약", "02  지표", "03  저장"], key="lm_view", on_change="rerun")
+        lazy = t1.open is not None
 
-        with t1:
-            st.markdown(summary_html(m, chosen, demo, title), unsafe_allow_html=True)
+        if t1.open or not lazy:
+            with t1:
+                raw_html(summary_html(m, chosen, demo, title), "lm_sum")
 
-        with t2:
-            st.markdown(folders_html(order, m, chosen, title), unsafe_allow_html=True)
-            st.html('<div class="lm-gap"></div>')
-            with st.expander("ⓘ 계산 방법 · 원래 그래프와 표 자세히 (팀원 화면)"):
-                tabs = st.tabs([f"{q['no']} {q['chip']}" for q in QUESTIONS])
-                for tab, q in zip(tabs, QUESTIONS):
-                    with tab:
-                        try:
-                            res = _detail(q["key"], data_a, data_b)
-                        except Exception as e:  # 한 지표가 실패해도 나머지는 보여줌
-                            st.error(f"이 지표를 그리지 못했어요: {e}")
-                            res = None
-                    summaries[q["key"]] = res.get("summary") if isinstance(res, dict) else None
+        if t2.open or not lazy:
+            with t2:
+                raw_html(folders_html(order, m, chosen, title), "lm_folders")
+                st.html('<div class="lm-gap"></div>')
+                # 팀원 원래 그래프는 펼쳤을 때만, 고른 지표 하나만 그림
+                exp = st.expander("ⓘ 계산 방법 · 원래 그래프와 표 자세히 (팀원 화면)", key="lm_detail", on_change="rerun")
+                if exp.open or exp.open is None:
+                    with exp:
+                        tabs = st.tabs([f"{q['no']} {q['chip']}" for q in QUESTIONS], key="lm_detail_tab", on_change="rerun")
+                        for tab, q in zip(tabs, QUESTIONS):
+                            if tab.open is False:
+                                continue
+                            with tab:
+                                try:
+                                    res = _detail(q["key"], data_a, data_b)
+                                except Exception as e:  # 한 지표가 실패해도 나머지는 보여줌
+                                    st.error(f"이 지표를 그리지 못했어요: {e}")
+                                    res = None
+                            if isinstance(res, dict) and res.get("summary"):
+                                st.session_state.setdefault("lm_summaries", {})[(title, q["key"])] = res["summary"]
 
+        # 리포트 요약: 팀원 그래프를 열어 본 지표는 팀원 요약 문장, 아니면 같은 숫자로 만든 한 줄
+        saved = st.session_state.get("lm_summaries", {})
         for q in QUESTIONS:
+            summaries[q["key"]] = saved.get((title, q["key"]))
             if not summaries.get(q["key"]):
                 a, b, unit, _ = headline(m, q["key"])
                 summaries[q["key"]] = f"{brief_line(q['key'], a, b, unit)} (A {a:g}{unit}, B {b:g}{unit})"
 
-        with t3:
-            pick = brief_pick(m, chosen)
-            prof_a, prof_b = pa["name"], pb["name"]
-            weak = pick[0]["chip"]
-            q_a = f"최근 논문을 보니 '{weak}' 쪽이 눈에 띄었습니다. 신입생이 합류하면 어떤 과제부터 맡게 되고, 1저자 연구 기회는 어떻게 주어지나요?"
-            q_b = f"'{weak}' 측면에서 연구실 운영 방식이 궁금합니다. 신입생이 적응할 때 선배 멘토링이나 세미나는 어떻게 진행되나요?"
-            st.markdown("**면담에서 물어볼 질문**")
-            c1, c2 = st.columns(2)
-            c1.caption(f"{prof_a} 교수님께")
-            c1.code(q_a, language=None, wrap_lines=True)
-            c2.caption(f"{prof_b} 교수님께")
-            c2.code(q_b, language=None, wrap_lines=True)
+        if t3.open or not lazy:
+            with t3:
+                pick = brief_pick(m, chosen)
+                prof_a, prof_b = pa["name"], pb["name"]
+                weak = pick[0]["chip"]
+                q_a = f"최근 논문을 보니 '{weak}' 쪽이 눈에 띄었습니다. 신입생이 합류하면 어떤 과제부터 맡게 되고, 1저자 연구 기회는 어떻게 주어지나요?"
+                q_b = f"'{weak}' 측면에서 연구실 운영 방식이 궁금합니다. 신입생이 적응할 때 선배 멘토링이나 세미나는 어떻게 진행되나요?"
+                st.markdown("**면담에서 물어볼 질문**")
+                c1, c2 = st.columns(2)
+                c1.caption(f"{prof_a} 교수님께")
+                c1.code(q_a, language=None, wrap_lines=True)
+                c2.caption(f"{prof_b} 교수님께")
+                c2.code(q_b, language=None, wrap_lines=True)
 
-            txt = build_txt_report(data_a, data_b, [summaries[q["key"]] for q in QUESTIONS], q_a, q_b)
-            c1, c2 = st.columns(2)
-            c1.download_button("리포트 저장 (TXT)", data=txt.encode("utf-8"), file_name=f"LABMATCH_{prof_a}_vs_{prof_b}.txt",
-                               mime="text/plain", use_container_width=True, type="primary")
-            if c2.button("A는 두고 B만 바꿔 비교하기", use_container_width=True, key="keepA"):
-                on_swap("B")
+                txt = build_txt_report(data_a, data_b, [summaries[q["key"]] for q in QUESTIONS], q_a, q_b)
+                c1, c2 = st.columns(2)
+                c1.download_button("리포트 저장 (TXT)", data=txt.encode("utf-8"), file_name=f"LABMATCH_{prof_a}_vs_{prof_b}.txt",
+                                   mime="text/plain", use_container_width=True, type="primary")
+                if c2.button("A는 두고 B만 바꿔 비교하기", use_container_width=True, key="keepA"):
+                    on_swap("B")
 
-            with st.expander("데이터를 읽을 때 주의할 점"):
-                st.markdown(
-                    "- **저자 식별:** OpenAlex는 전 세계 DB라 동명이인이 섞일 수 있어요. 본인 확인 단계에서 소속을 꼭 확인하세요.\n"
-                    "- **분석 범위:** 최근 논문 100편을 불러오고, 핵심 지표는 2021~2025년 논문으로 계산해요.\n"
-                    "- **논문에 없는 정보:** 연구실 분위기, 인건비, 비공개 과제는 반영되지 않아요. 면담에서 확인하세요."
-                )
+                with st.expander("데이터를 읽을 때 주의할 점"):
+                    st.markdown(
+                        "- **저자 식별:** OpenAlex는 전 세계 DB라 동명이인이 섞일 수 있어요. 본인 확인 단계에서 소속을 꼭 확인하세요.\n"
+                        "- **분석 범위:** 최근 논문 100편을 불러오고, 핵심 지표는 2021~2025년 논문으로 계산해요.\n"
+                        "- **논문에 없는 정보:** 연구실 분위기, 인건비, 비공개 과제는 반영되지 않아요. 면담에서 확인하세요."
+                    )
