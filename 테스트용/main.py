@@ -8,6 +8,7 @@ import streamlit as st
 from home_page import render_home
 from theme import theme_watch
 from korean_names import korean_name
+from aff_filter import aff_ok
 from build_home_snapshot import SUBFIELD_KO
 
 # 조원들이 만든 5개의 지표 화면은 compare_page에서 불러옵니다.
@@ -113,7 +114,7 @@ def _short(aid):
 
 
 @st.cache_data(show_spinner=False, ttl=3600)
-def fetch_openalex_lab_data_by_id(author_id, author_name, yonsei_only=False):
+def fetch_openalex_lab_data_by_id(author_id, author_name, yonsei_only=False, kw=None, col_kw=""):
     """교수님의 2021~2025년 논문 전부 (예전에는 최근 100편만 불러와서 논문이 많은 분은 5년치가 잘렸음)
     author_id: OpenAlex ID 하나, 또는 한 사람이 여러 프로필로 나뉜 경우 'A1|A2'
     yonsei_only: 연세대 교수 목록에서 고른 분은 연세대 소속으로 쓴 논문만 (OpenAlex가 동명이인 논문을 합쳐 둔 경우를 걸러냄)"""
@@ -155,6 +156,8 @@ def fetch_openalex_lab_data_by_id(author_id, author_name, yonsei_only=False):
     for w in raw_works:
         me = mine(w)
         if yonsei_only and not at_yonsei(w, me):
+            continue
+        if yonsei_only and kw and not aff_ok(me, kw, col_kw):
             continue
         kept.append(w)
     raw_works = kept
@@ -465,8 +468,8 @@ if st.session_state.step == 1:
                     st.session_state.cands_b = _candidates_for(pb)
                     # 두 분 모두 OpenAlex에서 정확히 고른 경우에는 동명이인 확인을 건너뜁니다.
                     if pa.get("oa_id") and pb.get("oa_id"):
-                        st.session_state.data_a = fetch_openalex_lab_data_by_id(pa["oa_id"], pa["name"], bool(pa.get("yonsei")))
-                        st.session_state.data_b = fetch_openalex_lab_data_by_id(pb["oa_id"], pb["name"], bool(pb.get("yonsei")))
+                        st.session_state.data_a = fetch_openalex_lab_data_by_id(pa["oa_id"], pa["name"], bool(pa.get("yonsei")), pa.get("kw"), pa.get("ckw", ""))
+                        st.session_state.data_b = fetch_openalex_lab_data_by_id(pb["oa_id"], pb["name"], bool(pb.get("yonsei")), pb.get("kw"), pb.get("ckw", ""))
                         st.session_state.step = 3
                     else:
                         st.session_state.step = 2
@@ -524,7 +527,7 @@ if st.session_state.step == 2:
                     name = person.get("name") or c["name"]
                     st.write(f"LAB {slot} {name} 교수님 2021~2025년 논문 불러오는 중")
                     yon = bool(person.get("yonsei")) and c["id"] == person.get("oa_id")
-                    st.session_state[key] = fetch_openalex_lab_data_by_id(c["id"], name, yon)
+                    st.session_state[key] = fetch_openalex_lab_data_by_id(c["id"], name, yon, person.get("kw") if yon else None, person.get("ckw", ""))
                     new_slots[slot] = {**person, "oa_id": c["id"], "inst": c.get("institution")}
                 st.write("다섯 가지 지표 계산 중")
                 status.update(label="준비됐어요", state="complete")

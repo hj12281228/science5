@@ -23,7 +23,7 @@ from practice2 import render_industry_collab
 from practice3 import render_interdisciplinarity
 from practice4 import render_lab_size
 from practice5 import render_continuity
-from compare_sheets import CSS as SHEET_CSS, QUESTIONS, interview_questions, collect, headline, brief_line, brief_pick, names_html, summary_html, folders_html, use_palette, css_vars, P
+from compare_sheets import CSS as SHEET_CSS, QUESTIONS, interview_questions, collect, headline, brief_line, brief_pick, names_html, summary_html, folders_html, pdf_save_html, use_palette, css_vars, P
 
 A_COLOR, B_COLOR = "#93BAB5", "#F5CB71"
 
@@ -450,6 +450,7 @@ def render_compare(slots, data_a, data_b, on_swap, build_txt_report, demo=False)
                 prof_a, prof_b = pa["name"], pb["name"]
                 # 면담 질문: 교수님마다 5개 (상대 연구실보다 강한 지표 1, 약한 지표 2, 공통 2)
                 q_a, q_b = interview_questions(m, "A", chosen), interview_questions(m, "B", chosen)
+                raw_html(pdf_save_html(order, m, chosen, title), "lm_pdf")
                 st.markdown("**면담에서 물어볼 질문**")
                 c1, c2 = st.columns(2)
                 for col, nm, qs in ((c1, prof_a, q_a), (c2, prof_b, q_b)):
