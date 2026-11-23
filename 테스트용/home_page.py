@@ -50,15 +50,18 @@ def load_logos():
 
 
 def yonsei_list(db_tree, profiles=None):
-    """professors_db.json 트리를 화면용 목록으로 펼치기 (profiles가 있으면 연구 분야·논문 수도 붙임)"""
-    profiles = profiles or {}
-    return [
-        {"name": p["name"], "eng": p.get("eng", ""), "col": col, "dept": dept,
-         "tags": profiles.get(p["name"], {}).get("tags", []), "works": profiles.get(p["name"], {}).get("works")}
-        for col, depts in db_tree.items()
-        for dept, profs in depts.items()
-        for p in profs
-    ]
+    """yonsei_profs.json 트리를 화면용 목록으로 펼치기.
+    OpenAlex ID가 확인된 분은 oa_id('A1|A2')와 yonsei=True를 붙여서, 비교할 때 동명이인 확인 없이 그 ID의 연세대 논문만 불러옴"""
+    out = []
+    for col, depts in db_tree.items():
+        for dept, profs in depts.items():
+            for p in profs:
+                item = {"name": p["name"], "eng": p.get("eng", ""), "col": col, "dept": dept,
+                        "tags": p.get("tags") or [], "works": p.get("works")}
+                if p.get("oa_ids"):
+                    item.update(oa_id="|".join(p["oa_ids"]), yonsei=True, inst="Yonsei University")
+                out.append(item)
+    return out
 
 
 def render_home(db_tree, slots, search, notice=None, profiles=None):

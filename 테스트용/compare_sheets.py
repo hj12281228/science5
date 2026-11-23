@@ -161,7 +161,7 @@ CSS = """
 .lm-t:has(.lm-foot){padding-bottom:80px}
 .lm-ring{position:absolute;right:26px;top:24px}
 .lm-ring + .tag.hd .tt{max-width:calc(100% - 140px)}
-.lm-huge{font-family:var(--disp);letter-spacing:-.05em;line-height:.85;font-size:clamp(64px,7.6vw,112px)}
+.lm-huge{font-family:var(--disp);letter-spacing:-.05em;line-height:.85;font-size:clamp(52px,6vw,88px)}
 .lm-huge.b{font-weight:700}.lm-huge.l{font-weight:300}.lm-huge.m{font-weight:500}
 .lm-huge u{text-decoration:none;font-size:.36em;font-weight:400;margin-left:4px;letter-spacing:0}
 .lm-mt{margin-top:28px}
@@ -196,7 +196,7 @@ CSS = """
 /* 박스 제목: 무슨 그래프인지 먼저 읽히게 */
 .lm .tag.hd{align-items:flex-start;gap:16px}
 .lm .tag.hd .tt{display:flex;flex-direction:column;gap:4px;min-width:0}
-.lm .tag.hd .tt b{font-family:var(--kr);font-size:17px;font-weight:700;letter-spacing:-.01em;color:var(--ink);line-height:1.3}
+.lm .tag.hd .tt b{word-break:keep-all;font-family:var(--kr);font-size:17px;font-weight:700;letter-spacing:-.01em;color:var(--ink);line-height:1.3}
 .lm .tag.hd .tt b i{font-style:normal;font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:.08em;margin-right:8px;opacity:.6;vertical-align:2px}
 .lm .tag.hd .tt span{font-family:var(--kr);font-size:13px;letter-spacing:0;line-height:1.45;color:var(--mute)}
 .lm .tag.hd > span{flex:none;padding-top:4px}
@@ -279,6 +279,19 @@ CSS = """
  .h280{min-height:0}.h300{min-height:240px}.lm-mt{margin-top:28px}
  .lm-nm{font-size:28px}.lm-nm small{font-size:13px}
 }
+/* 저장 버튼 (PDF·PNG) */
+.lm-hintrow{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:6px}.lm-hintrow .lm-hint2{margin:0}
+.lm-xbtn{font-family:var(--kr);font-size:12.5px;font-weight:600;color:var(--ink);background:transparent;border:1px solid var(--line);border-radius:999px;padding:6px 14px;cursor:pointer}
+.lm-xbtn:hover{border-color:var(--ink)}.lm-xbtn[disabled]{opacity:.5;cursor:wait}
+.lm-savebar{display:flex;justify-content:flex-end;margin-top:10px}
+/* 저장용 한 장 (화면 밖에서 그려서 캡처·인쇄) */
+.lm-pslide{width:1200px;box-sizing:border-box;background:var(--paper);color:var(--ink);padding:34px 36px 26px;font-family:var(--kr)}
+.lm-pslide .lm-hd{margin-bottom:22px}
+/* 저장본은 휴대폰·인쇄 화면 폭과 상관없이 항상 노트북 배치로 */
+.lm-pslide .lm-g{grid-template-columns:repeat(12,minmax(0,1fr))!important}
+.lm-pslide .s3{grid-column:span 3!important}.lm-pslide .s4{grid-column:span 4!important}.lm-pslide .s5{grid-column:span 5!important}
+.lm-pslide .s6{grid-column:span 6!important}.lm-pslide .s7{grid-column:span 7!important}.lm-pslide .s8{grid-column:span 8!important}.lm-pslide .s12{grid-column:span 12!important}
+.lm-pslide .lm-lights{grid-template-columns:1fr 1fr!important}
 </style>
 """
 
@@ -385,6 +398,38 @@ def brief_pick(m, chosen):
         a, b, *_ = headline(m, q["key"])
         return abs(a - b) / max(a, b, 1e-9)
     return sorted(QUESTIONS, key=lambda q: (q["key"] not in chosen, -diff(q)))[:3]
+
+
+# ================================================================ 면담 질문
+Q_LOW = {
+    "top": "우수 학회·저널 비중이 상대적으로 낮게 나왔는데, 연구실이 목표로 하는 학회·저널과 투고 방향이 궁금합니다.",
+    "ind": "외부 기관·기업과의 공동 연구는 어떻게 진행되고, 학생이 참여할 기회가 있나요?",
+    "mix": "다른 분야와 융합하는 연구에 관심이 있다면 연구실에서 어떻게 진행할 수 있나요?",
+    "size": "함께 논문을 쓰는 구성원이 많지 않아 보이는데, 신입생은 누구에게 지도와 피드백을 받게 되나요?",
+    "cont": "논문이 덜 나온 시기도 있었는데, 그 기간에 진행된 연구나 프로젝트가 있었나요?",
+}
+Q_HIGH = {
+    "top": "우수 학회·저널 논문이 많은데, 신입생이 1저자 논문을 쓰기까지 보통 얼마나 걸리나요?",
+    "ind": "외부 협업이 활발한데, 학생이 기업·기관 과제에 참여할 때 역할과 저자 기준은 어떻게 정해지나요?",
+    "mix": "여러 분야를 넘나드는 연구가 많은데, 배경이 다른 학생은 어떤 공부부터 준비하면 좋을까요?",
+    "size": "함께 쓰는 구성원이 많은데, 팀은 어떻게 나뉘고 사수·멘토링은 어떻게 이뤄지나요?",
+    "cont": "논문이 꾸준히 나오는데, 연구실의 연간 연구·투고 일정은 어떻게 운영되나요?",
+}
+Q_COMMON = ("인건비·연구비 지원과 학회 참석 지원은 어떻게 되나요?",
+            "졸업까지 걸리는 기간과 졸업생들의 진로가 궁금합니다.")
+
+
+def interview_questions(m, slot, chosen=()):
+    """교수님께 드릴 질문 5개: 상대 연구실보다 강한 지표 1개, 약한 지표 2개(내 기준 먼저), 공통 2개"""
+    other = "B" if slot == "A" else "A"
+    def d(q):
+        v = dict(zip(("A", "B"), headline(m, q["key"])[:2]))
+        return (v[slot] - v[other]) / max(v[slot], v[other], 1e-9)
+    qs = sorted(QUESTIONS, key=d)
+    high = qs[-1]
+    low = sorted([q for q in qs if q is not high], key=lambda q: (q["key"] not in chosen, d(q)))[:2]
+    out = [(Q_LOW if d(q) < 0 else Q_HIGH)[q["key"]] for q in low] + [Q_HIGH[high["key"]]]
+    return out + list(Q_COMMON)
 
 
 # ================================================================ 이름 · 요약
@@ -744,8 +789,8 @@ def sheet_size(m):
 
     avg = (f'<div class="lm-t s4 blk h280"><div class="tag hd"><div class="tt"><b>논문당 평균 저자</b><span>논문 한 편에 이름을 올린 저자 수의 평균</span></div><span>A &nbsp;&nbsp;&nbsp;&nbsp; B</span></div>'
            f'<div style="display:flex;gap:30px;margin-top:40px;align-items:baseline">'
-           f'<div class="lm-huge {"b" if a["avg_authors"] >= b["avg_authors"] else "l"} lbA" style="font-size:clamp(56px,6vw,92px)">{a["avg_authors"]:g}</div>'
-           f'<div class="lm-huge {"b" if b["avg_authors"] > a["avg_authors"] else "l"} lbB" style="font-size:clamp(56px,6vw,92px)">{b["avg_authors"]:g}</div></div>'
+           f'<div class="lm-huge {"b" if a["avg_authors"] >= b["avg_authors"] else "l"} lbA" style="font-size:clamp(46px,4.8vw,72px)">{a["avg_authors"]:g}</div>'
+           f'<div class="lm-huge {"b" if b["avg_authors"] > a["avg_authors"] else "l"} lbB" style="font-size:clamp(46px,4.8vw,72px)">{b["avg_authors"]:g}</div></div>'
            f'</div>')
 
     rows = list(a["distribution"].keys())
@@ -863,8 +908,10 @@ def folders_html(order, m, chosen, title):
             f'<summary><span class="lm-ftab">{q["no"]}<b>{esc(q["chip"])}</b></span><span class="no">{q["no"]}</span>'
             f'<span class="q">{esc(q["q"])}</span><span class="ab">{ab}</span>{star}<span class="chev">↓</span></summary>'
             f'<div class="lm-fbody"><div class="lm-g">{SHEETS[q["key"]](m)}</div>'
-            f'<div class="lm-slidefoot"><span>LABMATCH</span><span>{esc(title)}</span><span>{i + 1:02d} / {len(order):02d}</span></div></div></details>')
-    return (f'<div class="lm"><p class="lm-hint2">장을 누르면 펼쳐져요. 한 번에 한 장씩 열려요.</p>'
+            f'<div class="lm-slidefoot"><span>LABMATCH</span><span>{esc(title)}</span><span>{i + 1:02d} / {len(order):02d}</span></div>'
+            f'<div class="lm-savebar"><button type="button" class="lm-xbtn" data-lmx="png" data-i="{i}">이 장 이미지(PNG)로 저장</button></div></div></details>')
+    return (f'<div class="lm" data-title="{esc(title)}"><div class="lm-hintrow"><p class="lm-hint2">장을 누르면 펼쳐져요. 한 번에 한 장씩 열려요.</p>'
+            f'<button type="button" class="lm-xbtn" data-lmx="pdf">다섯 장 모두 PDF로 저장</button></div>'
             f'<div class="lm-folders">{"".join(parts)}</div></div>')
 
 

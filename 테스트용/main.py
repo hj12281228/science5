@@ -14,45 +14,15 @@ from build_home_snapshot import SUBFIELD_KO
 from compare_page import render_confirm, render_compare
 
 # =========================================================
-# [데이터베이스] 연세대학교 교수진 DB 자동 생성 및 로드
+# [데이터베이스] 연세대학교 교수진 목록 (yonsei_profs.json, build_yonsei_db.py로 만듦)
+# 교수님마다 OpenAlex ID를 고정해 두어서 이름 검색 때 동명이인·다른 대학 교수가 섞이지 않음
 # =========================================================
 def load_professor_db():
-    db_path = Path("professors_db.json")
-    if not db_path.exists():
-        default_db = {
-            "인공지능융합대학": {
-                "인공지능학과": [
-                    {"name": "함범섭", "eng": "Bumsub Ham"},
-                    {"name": "황도식", "eng": "Dosik Hwang"}
-                ]
-            },
-            "공과대학": {
-                "전기전자공학부": [
-                    {"name": "손광훈", "eng": "Kwanghoon Sohn"}
-                ]
-            },
-            "문과대학": {
-                "문헌정보학과": [
-                    {"name": "송민", "eng": "Min Song"},
-                    {"name": "김기영", "eng": "Kiyoung Kim"},
-                    {"name": "주영준", "eng": "Youngjoon Joo"},
-                    {"name": "이지연", "eng": "Jiyeon Lee"},
-                    {"name": "김성언", "eng": "Seongeon Kim"}
-                ]
-            }
-        }
-        try:
-            db_path.write_text(json.dumps(default_db, ensure_ascii=False, indent=4), encoding="utf-8")
-        except OSError:
-            pass
-    else:
-        default_db = None
-
-    # 여러 사용자가 동시에 접속하면 파일을 쓰는 도중에 읽을 수 있어서, 읽기 실패 시 기본값을 씁니다.
+    db_path = Path(__file__).with_name("yonsei_profs.json")
     try:
         db_tree = json.loads(db_path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
-        db_tree = default_db or {}
+        db_tree = {}
     name_map = {
         p["name"]: p["eng"]
         for depts in db_tree.values()
@@ -135,16 +105,59 @@ def search_author_candidates(query_name, yonsei_only=False):
         })
     return candidates
 
+YEARS = (2021, 2025)  # 지표 계산 기간 (최근 완전 연도 5년)
+
+
+def _short(aid):
+    return str(aid).rsplit("/", 1)[-1]
+
+
 @st.cache_data(show_spinner=False, ttl=3600)
-def fetch_openalex_lab_data_by_id(author_id, author_name):
-    resp = requests.get(
-        "https://api.openalex.org/works",
-        params={"filter": f"author.id:{author_id}", "sort": "publication_year:desc", "per-page": 100, **_openalex_params()},
-        timeout=30,
-    )
-    resp.raise_for_status()
-    works_res = resp.json()
-    raw_works = works_res.get("results", [])
+def fetch_openalex_lab_data_by_id(author_id, author_name, yonsei_only=False):
+    """교수님의 2021~2025년 논문 전부 (예전에는 최근 100편만 불러와서 논문이 많은 분은 5년치가 잘렸음)
+    author_id: OpenAlex ID 하나, 또는 한 사람이 여러 프로필로 나뉜 경우 'A1|A2'
+    yonsei_only: 연세대 교수 목록에서 고른 분은 연세대 소속으로 쓴 논문만 (OpenAlex가 동명이인 논문을 합쳐 둔 경우를 걸러냄)"""
+    ids = [_short(x) for x in str(author_id).split("|") if x]
+    full_ids = {"https://openalex.org/" + x for x in ids}
+    author_id = "https://openalex.org/" + ids[0]
+    raw_works, cursor = [], "*"
+    for _ in range(10):  # 200편씩 최대 2,000편
+        resp = requests.get(
+            "https://api.openalex.org/works",
+            params={"filter": f"author.id:{'|'.join(ids)},publication_year:{YEARS[0]}-{YEARS[1]}",
+                    "sort": "publication_year:desc", "per-page": 200, "cursor": cursor, **_openalex_params()},
+            timeout=30,
+        )
+        resp.raise_for_status()
+        page = resp.json()
+        raw_works += page.get("results", [])
+        cursor = (page.get("meta") or {}).get("next_cursor")
+        if not cursor or not page.get("results"):
+            break
+
+    def mine(w):
+        """교수님 본인 저자 칸: 나뉜 프로필 ID를 대표 ID 하나로 맞춤 (팀원 지표 코드가 ID 하나로 교수님을 찾음)"""
+        me = None
+        for a in w.get("authorships") or []:
+            if (a.get("author") or {}).get("id") in full_ids:
+                a["author"] = {**a["author"], "id": author_id}
+                me = me or a
+        return me
+
+    def at_yonsei(w, me):
+        insts = [i.get("id") for i in (me or {}).get("institutions") or []]
+        if insts:
+            return any(_short(i) == YONSEI_OA_ID for i in insts if i)
+        # 본인 소속이 비어 있으면 공저자 중 연세대가 있는지로 판단
+        return any(_short(i.get("id")) == YONSEI_OA_ID for a in w.get("authorships") or [] for i in a.get("institutions") or [] if i.get("id"))
+
+    kept = []
+    for w in raw_works:
+        me = mine(w)
+        if yonsei_only and not at_yonsei(w, me):
+            continue
+        kept.append(w)
+    raw_works = kept
 
     lab_dict = {
         "lab_name": f"{author_name} 연구실",
@@ -216,6 +229,11 @@ def fetch_openalex_lab_data_by_id(author_id, author_name):
 # =========================================================
 # [리포트 빌더] A4 1페이지 분량 알찬 TXT 리포트 생성
 # =========================================================
+def _qlines(qs):
+    qs = [qs] if isinstance(qs, str) else qs
+    return "\n".join(f"  {i}. {q}" for i, q in enumerate(qs, 1))
+
+
 def build_txt_report(data_a, data_b, summaries, q_a, q_b):
     prof_a = data_a["professor"]
     prof_b = data_b["professor"]
@@ -228,7 +246,7 @@ def build_txt_report(data_a, data_b, summaries, q_a, q_b):
 ====================================================================
 ■ 생성 일자   : {today}
 ■ 분석 대상   : {prof_a} 연구실  vs  {prof_b} 연구실
-■ 데이터 출처 : OpenAlex 공개 학술 DB (최근 100편 / 핵심 지표 2021~2025년)
+■ 데이터 출처 : OpenAlex 공개 학술 DB (2021~2025년 논문 전체)
 
 --------------------------------------------------------------------
 1. 연구실 기본 데이터 요약 (실시간 수집 기준)
@@ -258,10 +276,10 @@ def build_txt_report(data_a, data_b, summaries, q_a, q_b):
 3. 향후 액션 플랜: 교수님 면담 및 컨택 가이드
 --------------------------------------------------------------------
 ▶ {prof_a} 교수님 면담 시 추천 질문
-  "{q_a}"
+{_qlines(q_a)}
 
 ▶ {prof_b} 교수님 면담 시 추천 질문
-  "{q_b}"
+{_qlines(q_b)}
 
 ▶ 컨택 전 예비 대학원생 체크리스트
   [ ] 두 연구실의 최근 2년 대표 논문 1~2편 초록 읽어보기
@@ -403,7 +421,6 @@ def _candidates_for(person):
 if st.session_state.step == 1:
     event = render_home(
         PROF_DB_TREE, st.session_state.home_slots, st.session_state.home_search, st.session_state.home_notice,
-        profiles=yonsei_profiles(PROF_DB_TREE),
     )
 
     # 같은 이벤트가 다시 실행될 때 두 번 처리하지 않도록 t(시각)로 구분
@@ -448,8 +465,8 @@ if st.session_state.step == 1:
                     st.session_state.cands_b = _candidates_for(pb)
                     # 두 분 모두 OpenAlex에서 정확히 고른 경우에는 동명이인 확인을 건너뜁니다.
                     if pa.get("oa_id") and pb.get("oa_id"):
-                        st.session_state.data_a = fetch_openalex_lab_data_by_id(pa["oa_id"], pa["name"])
-                        st.session_state.data_b = fetch_openalex_lab_data_by_id(pb["oa_id"], pb["name"])
+                        st.session_state.data_a = fetch_openalex_lab_data_by_id(pa["oa_id"], pa["name"], bool(pa.get("yonsei")))
+                        st.session_state.data_b = fetch_openalex_lab_data_by_id(pb["oa_id"], pb["name"], bool(pb.get("yonsei")))
                         st.session_state.step = 3
                     else:
                         st.session_state.step = 2
@@ -505,8 +522,9 @@ if st.session_state.step == 2:
                     c = next(x for x in cands if x["id"] == picked[slot])
                     person = slots.get(slot) or {}
                     name = person.get("name") or c["name"]
-                    st.write(f"LAB {slot} {name} 교수님 최근 논문 100편 불러오는 중")
-                    st.session_state[key] = fetch_openalex_lab_data_by_id(c["id"], name)
+                    st.write(f"LAB {slot} {name} 교수님 2021~2025년 논문 불러오는 중")
+                    yon = bool(person.get("yonsei")) and c["id"] == person.get("oa_id")
+                    st.session_state[key] = fetch_openalex_lab_data_by_id(c["id"], name, yon)
                     new_slots[slot] = {**person, "oa_id": c["id"], "inst": c.get("institution")}
                 st.write("다섯 가지 지표 계산 중")
                 status.update(label="준비됐어요", state="complete")

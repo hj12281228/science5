@@ -10,6 +10,7 @@ LABMATCH 비교 화면 (첫 화면에서 '비교 시작'을 누른 뒤)
 """
 
 import html
+from pathlib import Path
 
 import streamlit as st
 
@@ -22,21 +23,106 @@ from practice2 import render_industry_collab
 from practice3 import render_interdisciplinarity
 from practice4 import render_lab_size
 from practice5 import render_continuity
-from compare_sheets import CSS as SHEET_CSS, QUESTIONS, collect, headline, brief_line, brief_pick, names_html, summary_html, folders_html, use_palette, css_vars, P
+from compare_sheets import CSS as SHEET_CSS, QUESTIONS, interview_questions, collect, headline, brief_line, brief_pick, names_html, summary_html, folders_html, use_palette, css_vars, P
 
 A_COLOR, B_COLOR = "#93BAB5", "#F5CB71"
 
 # 큰 HTML 조각을 그대로 붙이는 가벼운 칸.
 # st.markdown은 큰 HTML을 마크다운으로 파싱하느라 휴대폰에서 느렸고, st.html은 SVG 그래프를 지워 버려서 이 방식을 씀.
 # 페이지 CSS가 그대로 먹도록 isolate_styles=False, 같은 내용이면 다시 그리지 않음(열어 둔 장이 닫히지 않게).
-_RAW = st.components.v2.component(
-    "lm_raw_html",
-    js="""export default function({ parentElement, data }) {
+_RAW_JS = r"""
+
+// 저장용 한 장: 열려 있지 않은 장도 같은 모양으로 (제목 + 칸들 + 아래 줄)
+function slideOf(fold) {
+  const s = document.createElement("div");
+  s.className = "lm lm-pslide";
+  const no = fold.querySelector("summary .no")?.textContent || "";
+  const q = fold.querySelector("summary .q")?.textContent || "";
+  s.innerHTML = '<div class="lm-hd"><span class="no"></span><div class="q"></div></div>';
+  s.querySelector(".no").textContent = no;
+  s.querySelector(".q").textContent = q;
+  s.appendChild(fold.querySelector(".lm-g").cloneNode(true));
+  const foot = fold.querySelector(".lm-slidefoot");
+  if (foot) s.appendChild(foot.cloneNode(true));
+  return { el: s, no, q };
+}
+
+function stage(nodes) {
+  const box = document.createElement("div");
+  box.style.cssText = "position:fixed;left:-20000px;top:0;z-index:-1";
+  nodes.forEach((n) => box.appendChild(n));
+  document.body.appendChild(box);
+  return box;
+}
+
+async function savePng(root, i, btn) {
+  const fold = root.querySelectorAll("details.lm-fold")[i];
+  if (!fold) return;
+  const { el, no } = slideOf(fold);
+  const box = stage([el]);
+  const label = btn.textContent;
+  btn.disabled = true; btn.textContent = "이미지 만드는 중…";
+  try {
+    await document.fonts.ready;
+    const { toPng } = globalThis.htmlToImage;
+    const url = await toPng(el, { pixelRatio: 2, cacheBust: true, backgroundColor: getComputedStyle(el).backgroundColor });
+    const a = document.createElement("a");
+    a.href = url; a.download = `LABMATCH_${(root.querySelector(".lm[data-title]")?.dataset.title || "비교").replace(/\s+/g, "")}_${no}.png`;
+    document.body.appendChild(a); a.click(); a.remove();
+  } catch (e) {
+    console.error(e); alert("이미지를 만들지 못했어요. PDF 저장을 이용해 주세요.");
+  } finally {
+    box.remove(); btn.disabled = false; btn.textContent = label;
+  }
+}
+
+// PDF: 다섯 장을 한 쪽씩 인쇄 화면으로 보냄 → 브라우저 'PDF로 저장'. 브라우저가 화면 글꼴 그대로 그려서 글자가 깨지지 않고 선택도 됨
+function savePdf(root) {
+  const slides = [...root.querySelectorAll("details.lm-fold")].map((f) => slideOf(f).el);
+  const wrap = document.createElement("div");
+  wrap.id = "lm-print";
+  slides.forEach((s) => wrap.appendChild(s));
+  const box = stage([wrap]);
+  const h = Math.ceil(Math.max(...slides.map((s) => s.getBoundingClientRect().height))) + 2;
+  const style = document.createElement("style");
+  style.id = "lm-print-style";
+  style.textContent = `@page{size:1200px ${h}px;margin:0}
+@media print{html,body{background:#fff!important;height:auto!important;overflow:visible!important}
+body>*:not(#lm-print-host){display:none!important}
+#lm-print-host{position:static!important;left:auto!important}
+#lm-print .lm-pslide{break-after:page;page-break-after:always;min-height:${h}px}
+#lm-print .lm-pslide:last-child{break-after:auto;page-break-after:auto}
+#lm-print *{-webkit-print-color-adjust:exact;print-color-adjust:exact}}`;
+  box.id = "lm-print-host";
+  document.head.appendChild(style);
+  const done = () => { box.remove(); style.remove(); window.removeEventListener("afterprint", done); };
+  window.addEventListener("afterprint", done);
+  document.fonts.ready.then(() => setTimeout(() => window.print(), 50));
+}
+
+export default function({ parentElement, data }) {
   const h = (data && data.html) || "";
   if (parentElement.__lmHtml !== h) { parentElement.innerHTML = h; parentElement.__lmHtml = h; }
-}""",
-    isolate_styles=False,
-)
+  if (!parentElement.__lmx) {
+    parentElement.__lmx = true;
+    parentElement.addEventListener("click", (e) => {
+      const b = e.target.closest && e.target.closest("[data-lmx]");
+      if (!b) return;
+      e.preventDefault();
+      if (b.dataset.lmx === "png") savePng(parentElement, +b.dataset.i, b);
+      else if (b.dataset.lmx === "pdf") savePdf(parentElement);
+    });
+  }
+}
+"""
+
+# 큰 HTML 조각을 그대로 붙이는 가벼운 칸.
+# st.markdown은 큰 HTML을 마크다운으로 파싱하느라 휴대폰에서 느렸고, st.html은 SVG 그래프를 지워 버려서 이 방식을 씀.
+# 페이지 CSS가 그대로 먹도록 isolate_styles=False, 같은 내용이면 다시 그리지 않음(열어 둔 장이 닫히지 않게).
+# 지표 장의 'PDF로 저장', 'PNG 저장' 버튼도 여기서 처리
+# html-to-image (MIT, vendor/ 폴더에 함께 둠): 화면에 그려진 장을 그대로 PNG로. 외부 CDN 없이 동작
+_H2I = (Path(__file__).with_name("vendor") / "html-to-image.js").read_text(encoding="utf-8")
+_RAW = st.components.v2.component("lm_raw_html", js=_H2I + "\n" + _RAW_JS, isolate_styles=False)
 
 
 def raw_html(markup, key):
@@ -362,15 +448,13 @@ def render_compare(slots, data_a, data_b, on_swap, build_txt_report, demo=False)
             with t3:
                 pick = brief_pick(m, chosen)
                 prof_a, prof_b = pa["name"], pb["name"]
-                weak = pick[0]["chip"]
-                q_a = f"최근 논문을 보니 '{weak}' 쪽이 눈에 띄었습니다. 신입생이 합류하면 어떤 과제부터 맡게 되고, 1저자 연구 기회는 어떻게 주어지나요?"
-                q_b = f"'{weak}' 측면에서 연구실 운영 방식이 궁금합니다. 신입생이 적응할 때 선배 멘토링이나 세미나는 어떻게 진행되나요?"
+                # 면담 질문: 교수님마다 5개 (상대 연구실보다 강한 지표 1, 약한 지표 2, 공통 2)
+                q_a, q_b = interview_questions(m, "A", chosen), interview_questions(m, "B", chosen)
                 st.markdown("**면담에서 물어볼 질문**")
                 c1, c2 = st.columns(2)
-                c1.caption(f"{prof_a} 교수님께")
-                c1.code(q_a, language=None, wrap_lines=True)
-                c2.caption(f"{prof_b} 교수님께")
-                c2.code(q_b, language=None, wrap_lines=True)
+                for col, nm, qs in ((c1, prof_a, q_a), (c2, prof_b, q_b)):
+                    col.caption(f"{nm} 교수님께")
+                    col.code("\n".join(f"{i}. {q}" for i, q in enumerate(qs, 1)), language=None, wrap_lines=True)
 
                 txt = build_txt_report(data_a, data_b, [summaries[q["key"]] for q in QUESTIONS], q_a, q_b)
                 c1, c2 = st.columns(2)
@@ -382,6 +466,6 @@ def render_compare(slots, data_a, data_b, on_swap, build_txt_report, demo=False)
                 with st.expander("데이터를 읽을 때 주의할 점"):
                     st.markdown(
                         "- **저자 식별:** OpenAlex는 전 세계 DB라 동명이인이 섞일 수 있어요. 본인 확인 단계에서 소속을 꼭 확인하세요.\n"
-                        "- **분석 범위:** 최근 논문 100편을 불러오고, 핵심 지표는 2021~2025년 논문으로 계산해요.\n"
+                        "- **분석 범위:** 2021~2025년 논문 전체로 계산해요. 연세대 학과 목록에서 고른 교수님은 연세대 소속으로 쓴 논문만 계산해요.\n"
                         "- **논문에 없는 정보:** 연구실 분위기, 인건비, 비공개 과제는 반영되지 않아요. 면담에서 확인하세요."
                     )
