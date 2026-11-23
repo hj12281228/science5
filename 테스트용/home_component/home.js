@@ -106,11 +106,12 @@ const HTML = `
   <section class="sec-dept">
     <div class="sh"><h2>연세대 학과로 둘러보기</h2><p class="dept-cap"></p></div>
     <div class="chips dept-chips"></div>
+    <div class="dept-names" role="list" aria-label="이 학과 교수님 (가나다순)"></div>
     <div class="strip"><button class="nav l" data-act="prev" type="button" aria-label="이전">‹</button><button class="nav r" data-act="next" type="button" aria-label="다음">›</button></div>
     <div class="dots"></div>
   </section>
   <section class="sec-field">
-    <div class="sh"><h2>분야별 국내 연구자 별자리</h2><p>점 하나가 연구자 한 명이에요. 클수록 최근 3년 논문이 많아요. 점을 눌러 담아 보세요.</p></div>
+    <div class="sh"><h2>분야별 국내 연구자 별자리</h2><p>점 하나가 연구자 한 명, 선은 최근 3년 함께 논문을 쓴 사이예요. 클수록 논문이 많아요. 점을 눌러 담아 보세요.</p></div>
     <div class="field-body"></div>
   </section>
   <div class="scrim" hidden>
@@ -145,7 +146,7 @@ export default function (component) {
   ensureFonts();
   const D = data || {};
   const slots = { A: (D.slots && D.slots.A) || null, B: (D.slots && D.slots.B) || null };
-  const YON = (D.yonsei || []).map((p) => ({ ...p, key: 'y:' + p.name, aff: `연세대 ${p.dept}`, school: '연세대', sub: p.dept, tags: p.tags || [], works_label: p.works != null ? '전체 논문' : undefined }));
+  const YON = (D.yonsei || []).map((p) => ({ ...p, key: 'y:' + p.name, aff: `연세대 ${p.dept}`, school: '연세대', sub: p.dept, tags: p.tags || [], works_label: p.works != null ? (p.yonsei ? '연세대 논문' : '전체 논문') : undefined }));
   const LOGOS = D.logos || {};
   // 학교 로고: 이름이 같은 로고, 없으면 앞부분이 같은 가장 긴 로고 (예: 서울대병원 → 서울대)
   const LOGO_KEYS = Object.keys(LOGOS).sort((a, b) => b.length - a.length);
@@ -335,28 +336,39 @@ export default function (component) {
       return `<button class="chip ${d === UI.dept ? 'on' : ''}" type="button" data-dept="${esc(d)}">${esc(d)}<em>${esc(c)}</em></button>`;
     }).join('');
     const st = $('.strip');
-    st.querySelectorAll('.fc').forEach((n) => n.remove());
-    const list = YON.filter((y) => y.dept === UI.dept);
+    // 가나다순 이름 목록: 교수님이 많은 학과도 카드를 하나씩 넘기지 않고 바로 찾을 수 있게
+    const list = YON.filter((y) => y.dept === UI.dept).sort((x, y) => x.name.localeCompare(y.name, 'ko'));
     if (UI.idx >= list.length) UI.idx = 0;
+    $('.dept-names').innerHTML = list.map((p, i) => `<button type="button" role="listitem" class="${i === UI.idx ? 'on' : ''}" data-pick="${i}" aria-current="${i === UI.idx}">${esc(p.name)}</button>`).join('');
+    // 같은 학과면 카드를 다시 만들지 않고 위치만 옮김 → 옆으로 미끄러지는 움직임이 이어지고, 한 번에 한 칸씩만 이동
+    const sig = UI.dept + '|' + list.map((p) => p.key).join(',');
+    const rebuild = st.dataset.sig !== sig;
+    if (rebuild) { st.querySelectorAll('.fc').forEach((n) => n.remove()); st.dataset.sig = sig; }
     list.forEach((p, i) => {
       searchPool[p.key] = p;
       const off = i - UI.idx;
-      const el = document.createElement('div');
-      el.className = 'fc';
+      let el = rebuild ? null : st.querySelector(`.fc[data-idx="${i}"]`);
+      const fresh = !el;
+      if (fresh) { el = document.createElement('div'); el.className = 'fc'; el.dataset.idx = i; }
       el.style.transform = `translateX(${off * 190}px) scale(${off === 0 ? 1 : 0.84}) rotateY(${off * -8}deg)`;
       el.style.opacity = Math.abs(off) > 2 ? 0 : off === 0 ? 1 : 0.55;
       el.style.zIndex = 10 - Math.abs(off);
+      el.style.pointerEvents = Math.abs(off) > 1 ? 'none' : '';
+      el.classList.toggle('side', off !== 0);
+      el.setAttribute('aria-hidden', off !== 0);
       const onA = sameP(slots.A, p), onB = sameP(slots.B, p);
-      el.innerHTML = `<div class="eyebrow">${esc(p.col)}</div><div class="pn">${esc(p.name)}</div><div class="pe">${esc(p.eng)}</div>
+      const html = `<div class="eyebrow">${esc(p.col)}</div><div class="pn">${esc(p.name)}</div><div class="pe">${esc(p.eng)}</div>
         <div class="pd">${esc(p.dept)}</div>
         <div class="flabel">연구 분야</div>
         <div class="ftags">${(p.tags || []).length ? p.tags.slice(0, 3).map((t) => `<span>${esc(t)}</span>`).join('') + (p.tags.length > 3 ? `<span class="more">+${p.tags.length - 3}</span>` : '') : '<em>논문 데이터를 받으면 표시돼요</em>'}</div>
-        ${p.works != null ? `<div class="fw"><span>전체 논문</span><b>${p.works}<small> 편</small></b></div>` : ''}
-        <div class="acts"><button class="add a ${onA ? 'on' : ''}" type="button" data-add="A" data-key="${esc(p.key)}">${onA ? 'A에 담김' : 'A에 담기'}</button><button class="add b ${onB ? 'on' : ''}" type="button" data-add="B" data-key="${esc(p.key)}">${onB ? 'B에 담김' : 'B에 담기'}</button></div>`;
-      el.dataset.idx = i;
-      st.appendChild(el);
-      fitTags(el.querySelector('.ftags'), 'span', 'more');
-      fitCard(el, '.ftags', 'span', 'more');
+        ${p.works != null ? `<div class="fw"><span>${esc(p.works_label || "전체 논문")}</span><b>${p.works}<small> 편</small></b></div>` : ''}
+        <div class="acts"><button class="add a ${onA ? 'on' : ''}" type="button" data-add="A" data-key="${esc(p.key)}" tabindex="${off === 0 ? 0 : -1}">${onA ? 'A에 담김' : 'A에 담기'}</button><button class="add b ${onB ? 'on' : ''}" type="button" data-add="B" data-key="${esc(p.key)}" tabindex="${off === 0 ? 0 : -1}">${onB ? 'B에 담김' : 'B에 담기'}</button></div>`;
+      if (el.__html !== html) {
+        el.innerHTML = html; el.__html = html;
+        if (fresh) st.appendChild(el);
+        fitTags(el.querySelector('.ftags'), 'span', 'more');
+        fitCard(el, '.ftags', 'span', 'more');
+      }
     });
     $('.dots').innerHTML = list.map((_, i) => `<i class="${i === UI.idx ? 'on' : ''}"></i>`).join('');
     $('.nav.l').disabled = UI.idx === 0;
@@ -409,7 +421,7 @@ export default function (component) {
     const [y0, y1] = FS.window || [2023, 2025];
     body.innerHTML = `<p class="basis">국내 기관 논문이 ${FS.prev ? FS.prev[0] + '~' + FS.prev[1] + '년 대비 ' : ''}${y0}~${y1}년에 많이 늘어난 분야 순</p>
       <div class="chips">${chips}</div>${all}${subChips}
-      <div class="sky"><div class="canvasbox"><canvas aria-label="세부 분야별 연구자 별자리. 점을 끌어 당기거나 빈 곳을 끌어 돌려 볼 수 있어요. 같은 연구자 목록은 오른쪽 순위에 있어요." role="img"></canvas><div class="skybar"><span class="hint">점을 끌어 당기거나, 빈 곳을 끌어 돌려 보세요</span><button class="ghost sm" type="button" data-act="sky-reset">처음 모양으로</button></div><div class="legend"><span><i style="background:var(--A)"></i>연세대</span><span><i style="background:var(--dot)"></i>다른 국내 기관</span></div></div>
+      <div class="sky"><div class="canvasbox"><canvas aria-label="세부 분야별 연구자 별자리. 점을 끌어 당기거나 빈 곳을 끌어 돌려 볼 수 있어요. 같은 연구자 목록은 오른쪽 순위에 있어요." role="img"></canvas><div class="skybar"><span class="hint">빈 곳을 끌면 어느 방향으로든 돌아가요. 선 = 공저</span><button class="ghost sm" type="button" data-act="sky-reset">처음 모양으로</button></div><div class="legend"><span><i style="background:var(--A)"></i>연세대</span><span><i style="background:var(--dot)"></i>다른 국내 기관</span><span><i class="co-line"></i>함께 쓴 논문</span></div></div>
       <div class="rank"><h3>${title}</h3><p class="cap">국내 기관 전체, ${y0}~${y1}년 논문 수 기준</p><div class="rank-list"></div><div class="src">출처: OpenAlex (${esc(FS.generated || '')} 집계)</div></div></div>`;
     renderRank();
     startSky();
@@ -464,11 +476,11 @@ export default function (component) {
       const mx = list[0] ? list[0].works : 1;
       list.forEach((p) => {
         const a = rnd() * Math.PI * 2, d = 10 + rnd() * 48;
-        const x = centers[ci].x + Math.cos(a) * d, y = centers[ci].y + Math.sin(a) * d;
-        nodes.push({ p, ci, x, y, vx: 0, vy: 0, hx: x, hy: y, r: 3.5 + (p.works / mx) * 6.5 });
+        const x = centers[ci].x + Math.cos(a) * d, y = centers[ci].y + Math.sin(a) * d, z = (rnd() - 0.5) * 90 + (ci % 2 ? 24 : -24);
+        nodes.push({ p, ci, x, y, z, vx: 0, vy: 0, vz: 0, hx: x, hy: y, hz: z, r: 3.5 + (p.works / mx) * 6.5 });
       });
     });
-    // 같은 무리 안의 점들을 모두 이어지게(최소 신장 트리) 잇고, 가장 가까운 점과 한 번 더 이음 → 한 점을 끌면 무리 전체가 따라옴
+    // 보이지 않는 용수철: 같은 무리 안의 점들을 최소 신장 트리로 묶어서 한 점을 끌면 무리 전체가 따라옴 (선으로 그리지는 않음)
     const links = [];
     const linked = (i, j) => links.some((l) => (l.a === i && l.b === j) || (l.a === j && l.b === i));
     const dist = (i, j) => Math.hypot(nodes[i].hx - nodes[j].hx, nodes[i].hy - nodes[j].hy);
@@ -486,7 +498,13 @@ export default function (component) {
         if (j != null && dist(i, j) < 46) links.push({ a: i, b: j, len: dist(i, j) });
       });
     });
-    const st = { nodes, links, hover: null, raf: 0, angle: parentElement.__lmAngle || 0, spin: 0, drag: null, tipNode: null, visible: true, C: skyColors(), W: 0, H: 0, scale: 1, idle: 0 };
+    // 화면에 그리는 선 = 실제 공저 관계 (build_coauthor_links.py). 세부 분야가 달라도 함께 쓴 논문이 있으면 이어짐
+    const byId = {}; nodes.forEach((n, i) => { byId[String(n.p.oa_id || '').split('/').pop()] = i; });
+    const co = ((curField() && curField().links) || []).filter((l) => byId[l[0]] != null && byId[l[1]] != null)
+      .map((l) => ({ a: byId[l[0]], b: byId[l[1]], n: l[2] }));
+    co.forEach((l) => { nodes[l.a].deg = (nodes[l.a].deg || 0) + 1; nodes[l.b].deg = (nodes[l.b].deg || 0) + 1; });
+    const rot0 = parentElement.__lmRot || { yaw: 0, pitch: 0 };
+    const st = { nodes, links, co, hover: null, raf: 0, yaw: rot0.yaw, pitch: rot0.pitch, spinX: 0, spinY: 0, drag: null, tipNode: null, visible: true, C: skyColors(), W: 0, H: 0, scale: 1, idle: 0 };
     sky = st; parentElement.__lmSky = st;
     st.refreshColors = () => { st.C = skyColors(); };
     const resize = () => {
@@ -498,23 +516,31 @@ export default function (component) {
     resize();
     st.ro = new ResizeObserver(() => resize()); st.ro.observe(box);
     st.io = new IntersectionObserver((es) => { st.visible = es[0].isIntersecting; if (st.visible && !st.raf) st.raf = requestAnimationFrame(frame); }); st.io.observe(box);
-    // 세계 좌표 ↔ 화면 좌표 (회전 + 축척)
-    const toScreen = (x, y) => { const c = Math.cos(st.angle), s = Math.sin(st.angle); return { x: st.W / 2 + (x * c - y * s) * st.scale, y: st.H / 2 + 20 + (x * s + y * c) * st.scale }; };
-    const toWorld = (sx, sy) => { const c = Math.cos(-st.angle), s = Math.sin(-st.angle), x = (sx - st.W / 2) / st.scale, y = (sy - st.H / 2 - 20) / st.scale; return { x: x * c - y * s, y: x * s + y * c }; };
+    // 세계 좌표(3D) ↔ 화면 좌표: 좌우로 끌면 세로축(yaw), 위아래로 끌면 가로축(pitch)으로 돌고 원근을 줌
+    const DEPTH = 650;
+    const rotate = (x, y, z) => {
+      const cy = Math.cos(st.yaw), sy = Math.sin(st.yaw), cp = Math.cos(st.pitch), sp = Math.sin(st.pitch);
+      const x1 = x * cy - z * sy, z1 = x * sy + z * cy;
+      return { x: x1, y: y * cp - z1 * sp, z: y * sp + z1 * cp };
+    };
+    const toScreen = (x, y, z) => { const r = rotate(x, y, z), f = DEPTH / (DEPTH + r.z); return { x: st.W / 2 + r.x * st.scale * f, y: st.H / 2 + 20 + r.y * st.scale * f, z: r.z, f }; };
+    const toWorld = (sx, sy, n) => {
+      const rz = rotate(n.x, n.y, n.z).z, f = DEPTH / (DEPTH + rz);
+      const x1 = (sx - st.W / 2) / (st.scale * f), y2 = (sy - st.H / 2 - 20) / (st.scale * f);
+      const c1 = Math.cos(st.yaw), s1 = Math.sin(st.yaw), c2 = Math.cos(st.pitch), s2 = Math.sin(st.pitch);
+      const y = y2 * c2 + rz * s2, z1 = -y2 * s2 + rz * c2;
+      return { x: x1 * c1 + z1 * s1, y, z: -x1 * s1 + z1 * c1 };
+    };
     const alpha = (hex, a) => { const h = hex.replace('#', ''); if (!/^[0-9a-f]{3,6}$/i.test(h)) return hex; const n = parseInt(h.length === 3 ? h.replace(/./g, '$&$&') : h, 16); return `rgba(${n >> 16 & 255},${n >> 8 & 255},${n & 255},${a})`; };
     const act = (n) => !UI.sub || subs[n.ci].id === UI.sub;
-    // 세부 분야를 고르면 그 무리가 위쪽으로 오도록 회전
-    st.target = null;
-    if (UI.sub && subs.length > 1) {
-      const ci = subs.findIndex((s) => s.id === UI.sub);
-      if (ci >= 0) { const base = Math.atan2(centers[ci].y, centers[ci].x); st.target = -Math.PI / 2 - base; }
-    }
+    // 세부 분야를 고르면 정면으로 돌아와서 그 무리가 잘 보이게
+    st.target = UI.sub ? { yaw: 0, pitch: 0 } : null;
     function physics() {
       const N = st.nodes;
       for (const l of st.links) {
-        const a = N[l.a], b = N[l.b], dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy) || 0.01, f = (d - l.len) * 0.03;
-        const fx = (dx / d) * f, fy = (dy / d) * f;
-        a.vx += fx; a.vy += fy; b.vx -= fx; b.vy -= fy;
+        const a = N[l.a], b = N[l.b], dx = b.x - a.x, dy = b.y - a.y, dz = b.z - a.z, d = Math.hypot(dx, dy, dz) || 0.01, f = (d - l.len) * 0.03;
+        const fx = (dx / d) * f, fy = (dy / d) * f, fz = (dz / d) * f;
+        a.vx += fx; a.vy += fy; a.vz += fz; b.vx -= fx; b.vy -= fy; b.vz -= fz;
       }
       for (let i = 0; i < N.length; i++) for (let j = i + 1; j < N.length; j++) {
         const a = N[i], b = N[j], dx = b.x - a.x, dy = b.y - a.y, d2 = dx * dx + dy * dy, min = a.r + b.r + 6;
@@ -522,29 +548,37 @@ export default function (component) {
       }
       let energy = 0;
       for (const n of N) {
-        if (st.drag && st.drag.node === n) { n.vx = n.vy = 0; continue; }
-        n.vx += (n.hx - n.x) * 0.012; n.vy += (n.hy - n.y) * 0.012;   // 제자리로 돌아가려는 힘
-        n.vx *= 0.82; n.vy *= 0.82; n.x += n.vx; n.y += n.vy;
-        energy += Math.abs(n.vx) + Math.abs(n.vy);
+        if (st.drag && st.drag.node === n) { n.vx = n.vy = n.vz = 0; continue; }
+        n.vx += (n.hx - n.x) * 0.012; n.vy += (n.hy - n.y) * 0.012; n.vz += (n.hz - n.z) * 0.012;   // 제자리로 돌아가려는 힘
+        n.vx *= 0.82; n.vy *= 0.82; n.vz *= 0.82; n.x += n.vx; n.y += n.vy; n.z += n.vz;
+        energy += Math.abs(n.vx) + Math.abs(n.vy) + Math.abs(n.vz);
       }
       return energy;
     }
     function draw(t) {
       const C = st.C, W = st.W, H = st.H;
       ctx.clearRect(0, 0, W, H);
-      const P = st.nodes.map((n) => toScreen(n.x, n.y));
-      ctx.lineWidth = 1;
-      for (const l of st.links) {
-        const a = st.nodes[l.a], on = act(a);
-        ctx.strokeStyle = on ? alpha(C.A, 0.45) : alpha(C.other, 0.14);
+      const P = st.nodes.map((n) => toScreen(n.x, n.y, n.z));
+      const fog = (i) => Math.max(0.35, Math.min(1, P[i].f * 1.15 - 0.1));   // 뒤쪽 점은 흐리게
+      // 공저 선: 함께 쓴 논문이 많을수록 굵게. 마우스를 올린 사람의 선은 진하게
+      const focus = st.hover || st.tipNode;
+      for (const l of st.co) {
+        const a = st.nodes[l.a], b = st.nodes[l.b], on = act(a) || act(b), hot = focus && (focus === a || focus === b);
+        ctx.lineWidth = Math.min(3.2, 0.8 + Math.log2(1 + l.n) * 0.7);
+        ctx.strokeStyle = hot ? alpha(C.ink, 0.75) : on ? alpha(C.A, 0.5 * Math.min(fog(l.a), fog(l.b))) : alpha(C.other, 0.12);
         ctx.beginPath(); ctx.moveTo(P[l.a].x, P[l.a].y); ctx.lineTo(P[l.b].x, P[l.b].y); ctx.stroke();
       }
-      st.nodes.forEach((n, i) => {
+      ctx.lineWidth = 1;
+      const order = st.nodes.map((_, i) => i).sort((i, j) => P[j].z - P[i].z);   // 먼 점부터 그림
+      order.forEach((i) => {
+        const n = st.nodes[i];
         const on = act(n), tw = on && !reduce ? 1 + Math.sin(t / 650 + n.hx) * 0.07 : 1, s = P[i];
-        n.sx = s.x; n.sy = s.y; n.sr = n.r * tw * Math.max(0.85, st.scale);
+        n.sx = s.x; n.sy = s.y; n.sr = n.r * tw * Math.max(0.85, st.scale) * s.f;
         ctx.beginPath(); ctx.arc(s.x, s.y, n.sr, 0, Math.PI * 2);
+        ctx.globalAlpha = fog(i);
         ctx.fillStyle = n.p.yon ? (on ? C.A : alpha(C.A, 0.3)) : (on ? C.other : alpha(C.other, 0.28));
         ctx.fill();
+        ctx.globalAlpha = 1;
         const isA = sameP(slots.A, n.p), isB = sameP(slots.B, n.p);
         if (isA || isB || st.hover === n || st.tipNode === n) { ctx.lineWidth = 2; ctx.strokeStyle = isB ? C.B : isA ? C.A : C.ink; ctx.beginPath(); ctx.arc(s.x, s.y, n.sr + 4, 0, Math.PI * 2); ctx.stroke(); ctx.lineWidth = 1; }
       });
@@ -580,18 +614,19 @@ export default function (component) {
       st.raf = 0;
       if (!sky || sky !== st) return;
       const e = physics();
-      // 회전: 끌고 있지 않으면 관성으로 돌다가 멈춤. 고른 세부 분야가 있으면 그 무리를 위로
+      // 회전: 끌고 있지 않으면 관성으로 돌다가 멈춤. 세부 분야를 고르거나 '처음 모양으로'를 누르면 정면으로
       if (!st.drag) {
         if (st.target != null) {
-          let d = st.target - st.angle; d = Math.atan2(Math.sin(d), Math.cos(d));
-          st.angle += d * (reduce ? 1 : 0.08);
-          if (Math.abs(d) < 0.002) st.target = null;
-        } else if (Math.abs(st.spin) > 0.0004) { st.angle += st.spin; st.spin *= 0.94; }
-        else st.spin = 0;
+          const wrap = (d) => Math.atan2(Math.sin(d), Math.cos(d));
+          const dy = wrap(st.target.yaw - st.yaw), dp = wrap(st.target.pitch - st.pitch), k = reduce ? 1 : 0.08;
+          st.yaw += dy * k; st.pitch += dp * k;
+          if (Math.abs(dy) + Math.abs(dp) < 0.003) st.target = null;
+        } else if (Math.abs(st.spinX) + Math.abs(st.spinY) > 0.0006) { st.yaw += st.spinX; st.pitch += st.spinY; st.spinX *= 0.94; st.spinY *= 0.94; }
+        else st.spinX = st.spinY = 0;
       }
-      parentElement.__lmAngle = st.angle;
+      parentElement.__lmRot = { yaw: st.yaw, pitch: st.pitch };
       draw(t);
-      const moving = st.drag || e > 0.05 || st.spin !== 0 || st.target != null || !reduce;
+      const moving = st.drag || e > 0.05 || st.spinX !== 0 || st.spinY !== 0 || st.target != null || !reduce;
       if (st.visible && moving) st.raf = requestAnimationFrame(frame);
     }
     st.kick = () => { if (!st.raf) st.raf = requestAnimationFrame(frame); };
@@ -609,7 +644,7 @@ export default function (component) {
       if (tip) tip.remove(); tip = null; st.tipNode = n || null;
       if (!n) return;
       tip = document.createElement('div'); tip.className = 'tip';
-      tip.innerHTML = `<div class="tip-h">${badge(n.p.school, 'sm')}<div style="min-width:0"><b>${esc(n.p.name)}</b>${n.p.eng ? `<div class="en">${esc(n.p.eng)}</div>` : ''}</div></div><div class="af">${esc(n.p.aff)}${n.p.yon ? ' <span class="yon">연세대</span>' : ''}</div><div class="af">${esc(n.p.field)}, 최근 3년 논문 ${n.p.works}편</div>
+      tip.innerHTML = `<div class="tip-h">${badge(n.p.school, 'sm')}<div style="min-width:0"><b>${esc(n.p.name)}</b>${n.p.eng ? `<div class="en">${esc(n.p.eng)}</div>` : ''}</div></div><div class="af">${esc(n.p.aff)}${n.p.yon ? ' <span class="yon">연세대</span>' : ''}</div><div class="af">${esc(n.p.field)}, 최근 3년 논문 ${n.p.works}편</div>${n.deg ? `<div class="af">별자리 안 공저자 ${n.deg}명 (선으로 연결)</div>` : ''}
         <div class="acts"><button class="add a" type="button" data-add="A" data-key="${esc(n.p.key)}">A에 담기</button><button class="add b" type="button" data-add="B" data-key="${esc(n.p.key)}">B에 담기</button></div>`;
       box.appendChild(tip);
       placeTip(n);
@@ -620,8 +655,8 @@ export default function (component) {
     cv.onpointerdown = (e) => {
       const p = at(e), n = hit(p.x, p.y);
       st.target = null;
-      st.drag = { node: n, sx: p.x, sy: p.y, moved: false, last: Math.atan2(p.y - st.H / 2 - 20, p.x - st.W / 2), t: performance.now() };
-      st.spin = 0;
+      st.drag = { node: n, sx: p.x, sy: p.y, moved: false, lx: p.x, ly: p.y, t: performance.now() };
+      st.spinX = st.spinY = 0;
       cv.setPointerCapture(e.pointerId);
       cv.style.cursor = 'grabbing';
       st.kick();
@@ -633,12 +668,13 @@ export default function (component) {
         if (!d.moved && Math.hypot(p.x - d.sx, p.y - d.sy) > 4) d.moved = true;
         if (!d.moved) return;
         if (tip) showTip(null);
-        if (d.node) { const w = toWorld(p.x, p.y); d.node.x = w.x; d.node.y = w.y; }
+        if (d.node) { const w = toWorld(p.x, p.y, d.node); d.node.x = w.x; d.node.y = w.y; d.node.z = w.z; }
         else {
-          const a = Math.atan2(p.y - st.H / 2 - 20, p.x - st.W / 2);
-          let da = a - d.last; da = Math.atan2(Math.sin(da), Math.cos(da));
-          st.angle += da; d.last = a;
-          const now = performance.now(); st.spin = reduce ? 0 : da * Math.min(1, 16 / Math.max(1, now - d.t)); d.t = now;
+          // 빈 곳을 끌면 어느 방향으로든 회전 (좌우 = 세로축, 위아래 = 가로축)
+          const ax = (p.x - d.lx) * 0.008, ay = -(p.y - d.ly) * 0.008;
+          st.yaw += ax; st.pitch = Math.max(-1.3, Math.min(1.3, st.pitch + ay)); d.lx = p.x; d.ly = p.y;
+          const now = performance.now(), k = reduce ? 0 : Math.min(1, 16 / Math.max(1, now - d.t));
+          st.spinX = ax * k; st.spinY = ay * k; d.t = now;
         }
         st.kick();
         return;
@@ -656,7 +692,7 @@ export default function (component) {
     cv.onpointerleave = () => { if (!st.drag && st.hover) { st.hover = null; st.kick(); } };
     cv.style.cursor = 'grab';
     const reset = box.querySelector('[data-act="sky-reset"]');
-    if (reset) reset.onclick = () => { st.target = 0; st.spin = 0; st.nodes.forEach((n) => { n.vx += (n.hx - n.x) * 0.2; n.vy += (n.hy - n.y) * 0.2; }); showTip(null); st.kick(); };
+    if (reset) reset.onclick = () => { st.target = { yaw: 0, pitch: 0 }; st.spinX = st.spinY = 0; st.nodes.forEach((n) => { n.vx += (n.hx - n.x) * 0.2; n.vy += (n.hy - n.y) * 0.2; n.vz += (n.hz - n.z) * 0.2; }); showTip(null); st.kick(); };
   }
 
   // ---------- 전체 그리기 ----------
@@ -700,6 +736,8 @@ export default function (component) {
       if (dp) { UI.dept = dp.dataset.dept; UI.idx = 0; S().renderDept(); return; }
       const fc = t.closest('.fc');
       if (fc && !t.closest('button')) { UI.idx = +fc.dataset.idx; S().renderDept(); return; }
+      const pk = t.closest('[data-pick]');
+      if (pk) { UI.idx = +pk.dataset.pick; S().renderDept(); return; }
       const fd = t.closest('[data-field]');
       if (fd) { UI.field = fd.dataset.field; UI.sub = null; S().renderFields(); return; }
       const sb = t.closest('[data-sub]');

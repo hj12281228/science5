@@ -132,7 +132,15 @@
 .lm .add.a:hover{background:var(--A-soft)} .lm .add.b:hover{background:var(--B-soft)}
 .lm .add.on{color:#fff}
 .lm .add.a.on{background:var(--A);border-color:var(--A)} .lm .add.b.on{background:var(--B);border-color:var(--B)}
-.lm .nav{position:absolute;top:50%;transform:translateY(-50%);width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--surface);font-size:18px;color:var(--ink);z-index:3}
+.lm .nav{position:absolute;top:50%;transform:translateY(-50%);width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--surface);font-size:18px;color:var(--ink);z-index:30;box-shadow:0 4px 12px -6px rgba(0,0,0,.3)}
+/* 화살표 주변은 옆 카드가 눌리지 않게 비워 둠 (예전에는 옆 카드가 화살표 위에 겹쳐서 두 칸씩 넘어가거나 카드가 눌렸음) */
+.lm .strip::before,.lm .strip::after{content:"";position:absolute;top:0;bottom:0;width:64px;z-index:25}
+.lm .strip::before{left:0}.lm .strip::after{right:0}
+.lm .fc.side{cursor:pointer}
+.lm .dept-names{display:flex;flex-wrap:wrap;gap:4px 6px;margin-top:10px}
+.lm .dept-names button{border:0;background:none;padding:4px 8px;border-radius:8px;font-size:13.5px;color:var(--sub)}
+.lm .dept-names button:hover{background:var(--soft);color:var(--ink)}
+.lm .dept-names button.on{background:var(--ink);color:var(--surface);font-weight:600}
 .lm .nav[disabled]{opacity:.35}
 .lm .nav.l{left:14px} .lm .nav.r{right:14px}
 .lm .dots{display:flex;justify-content:center;gap:6px;margin-top:12px}
@@ -237,3 +245,6 @@
 .lm.dark .fc,.lm.dark .tip,.lm.dark .drop,.lm.dark .modal{box-shadow:0 18px 40px -20px rgba(0,0,0,.8)}
 .lm.dark .scrim{background:rgba(0,0,0,.6)}
 .lm.dark .searchbox{box-shadow:0 6px 30px -12px color-mix(in srgb,var(--A) 45%,transparent)}
+
+/* 별자리 범례: 공저 선 */
+.lm .legend i.co-line{width:16px;height:2px;border-radius:1px;background:var(--A);vertical-align:3px}
