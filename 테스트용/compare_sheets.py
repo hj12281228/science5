@@ -284,7 +284,7 @@ CSS = """
 .lm-xbtn{font-family:var(--kr);font-size:12.5px;font-weight:600;color:var(--ink);background:transparent;border:1px solid var(--line);border-radius:999px;padding:6px 14px;cursor:pointer}
 .lm-xbtn:hover{border-color:var(--ink)}
 .lm-pdfrow{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;border:1px solid var(--line);border-radius:16px;padding:14px 16px;margin:4px 0 14px}
-.lm-pdfrow b{font-size:15px}.lm-pdfrow p{margin:2px 0 0;font-size:13px;color:var(--mute)}
+.lm-pngs{display:flex;gap:6px;flex-wrap:wrap}.lm-pdfrow b{font-size:15px}.lm-pdfrow p{margin:2px 0 0;font-size:13px;color:var(--mute)}
 .lm-xbtn.lm-xbtn-main{background:var(--ink);color:var(--paper,#fff);border-color:var(--ink);padding:8px 18px;font-size:13.5px}.lm-xbtn[disabled]{opacity:.5;cursor:wait}
 .lm-savebar{display:flex;justify-content:flex-end;margin-top:10px}
 /* 저장용 한 장 (화면 밖에서 그려서 캡처·인쇄) */
@@ -912,8 +912,8 @@ def folders_html(order, m, chosen, title, hint=True):
             f'<span class="q">{esc(q["q"])}</span><span class="ab">{ab}</span>{star}<span class="chev">↓</span></summary>'
             f'<div class="lm-fbody"><div class="lm-g">{SHEETS[q["key"]](m)}</div>'
             f'<div class="lm-slidefoot"><span>LABMATCH</span><span>{esc(title)}</span><span>{i + 1:02d} / {len(order):02d}</span></div>'
-            f'<div class="lm-savebar"><button type="button" class="lm-xbtn" data-lmx="png" data-i="{i}">이 장 이미지(PNG)로 저장</button></div></div></details>')
-    head = '<p class="lm-hint2">장을 누르면 펼쳐져요. 한 번에 한 장씩 열려요. 각 장 아래에서 이미지(PNG)로 저장할 수 있어요.</p>' if hint else ""
+            f'</div></details>')
+    head = '<p class="lm-hint2">장을 누르면 펼쳐져요. 한 번에 한 장씩 열려요. PDF·이미지 저장은 ‘저장’ 탭에서 할 수 있어요.</p>' if hint else ""
     return f'<div class="lm" data-title="{esc(title)}">{head}<div class="lm-folders">{"".join(parts)}</div></div>'
 
 
@@ -922,6 +922,9 @@ def pdf_save_html(order, m, chosen, title):
     return (f'<div class="lm lm-pdfbox" data-title="{esc(title)}"><div class="lm-pdfrow">'
             f'<div><b>지표 다섯 장 PDF</b><p>요약 문장과 그래프를 한 장에 하나씩 담아요. 인쇄 창에서 \'PDF로 저장\'을 고르세요.</p></div>'
             f'<button type="button" class="lm-xbtn lm-xbtn-main" data-lmx="pdf">PDF로 저장</button></div>'
+            f'<div class="lm-pdfrow"><div><b>한 장씩 이미지(PNG)</b><p>발표 자료에 넣을 장만 골라 저장하세요.</p></div><div class="lm-pngs">'
+            + "".join(f'<button type="button" class="lm-xbtn" data-lmx="png" data-i="{i}">{q["no"]} {esc(q["chip"])}</button>' for i, q in enumerate(order))
+            + '</div></div>'
             f'<div hidden>{folders_html(order, m, chosen, title, hint=False)}</div></div>')
 
 

@@ -272,7 +272,31 @@
 .lm .rk.yon-row{box-shadow:inset 3px 0 0 var(--A);padding-left:8px;margin-left:-8px}
 .lm .rk.yon-row .nm{color:var(--tA)}
 @media (max-width:640px){ .lm .skytools [data-sky="names"],.lm .skytools [data-sky="linked"]{font-size:11px;padding:4px 8px} .lm .canvasbox{height:420px} }
-.lm .dept-cols{margin-bottom:8px}
-.lm .dept-cols .chip.col{font-size:13px;padding:5px 11px}
-.lm .dept-cols + .dept-chips{padding-top:8px;border-top:1px dashed var(--line)}
+/* 학과 둘러보기: 단과대학 | 학과 | 교수님 세 칸 */
+.lm .dept-browser{display:grid;grid-template-columns:170px 220px minmax(0,1fr);gap:0;margin-top:14px;border:1px solid var(--line);border-radius:20px;background:var(--surface);overflow:hidden;height:500px}
+.lm .dcol,.lm .ddep{display:flex;flex-direction:column;min-height:0;border-right:1px solid var(--line)}
+.lm .dcol{background:var(--soft)}
+.lm .dh{font-size:12px;font-weight:600;color:var(--faint);padding:14px 16px 8px;flex:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lm .dlist{overflow-y:auto;min-height:0;padding:0 8px 10px;scrollbar-width:thin}
+.lm .drow{display:flex;align-items:center;gap:6px;width:100%;border:0;background:none;text-align:left;padding:7px 8px;border-radius:8px;font-size:13.5px;color:var(--sub);cursor:pointer}
+.lm .drow span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lm .drow em{font-style:normal;font-size:11.5px;color:var(--faint);font-variant-numeric:tabular-nums}
+.lm .drow i{font-style:normal;color:transparent;font-size:14px;width:8px}
+.lm .drow:hover{color:var(--ink);background:color-mix(in srgb,var(--ink) 5%,transparent)}
+.lm .drow.on{color:var(--ink);font-weight:600;background:var(--surface);box-shadow:0 1px 0 var(--line),0 0 0 1px var(--line)}
+.lm .ddep .drow.on{background:var(--soft);box-shadow:none}
+.lm .drow.on i{color:var(--ink)}
+.lm .dpane{display:flex;flex-direction:column;min-width:0;min-height:0}
+.lm .dpane .dept-names{margin:0;padding:0 14px;flex:none;max-height:66px;overflow-y:auto;scrollbar-width:thin}
+.lm .dpane .strip{flex:1;margin:8px 0 0;border-radius:0;height:auto;min-height:356px;background:transparent}
+.lm .dpane .dots{margin:6px 0 12px}
+@media (max-width:860px){
+  .lm .dept-browser{grid-template-columns:minmax(0,1fr);height:auto}
+  .lm .dcol,.lm .ddep{border-right:0;border-bottom:1px solid var(--line)}
+  .lm .dh{padding:10px 14px 4px}
+  .lm .dlist{display:flex;overflow-x:auto;overflow-y:hidden;gap:4px;padding:0 10px 10px}
+  .lm .drow{width:auto;flex:none}
+  .lm .drow i{display:none}
+  .lm .dpane .strip{min-height:370px}
+}
 .lm .dots .cnt{font-size:12px;color:var(--sub);font-variant-numeric:tabular-nums}
