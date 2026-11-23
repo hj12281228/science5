@@ -194,9 +194,9 @@ TOP_CSS = """
 .st-key-lm_top .st-key-lm_swapB button{border-color:#F5CB71;color:#946600}
 .lm-logo-word{font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:20px;letter-spacing:.04em;padding-top:4px}
 .st-key-lm_top{border-bottom:1px solid #141414;padding-bottom:10px}
-/* 비교 화면 바깥 여백: 화면 높이에 맞춘 너비(장 하나가 약 16:9 슬라이드처럼 한 화면에 들어오게), 넓은 화면에선 가운데 */
+/* 비교 화면 바깥 여백: 넓은 화면에선 내용 폭을 1240px로 묶고 가운데 */
 @media (min-width:1101px){
- .stMainBlockContainer:has(.st-key-lm_tabs){max-width:clamp(1040px,calc((100vh - 60px) * 1.9),1320px);padding-left:48px;padding-right:48px;padding-top:4.5rem}
+ .stMainBlockContainer:has(.st-key-lm_tabs){max-width:1240px;padding-left:48px;padding-right:48px}
 }
 @media (min-width:701px) and (max-width:1100px){.stMainBlockContainer:has(.st-key-lm_tabs){padding-left:40px;padding-right:40px}}
 @media (max-width:700px){.stMainBlockContainer:has(.st-key-lm_tabs){padding-left:18px;padding-right:18px}}
