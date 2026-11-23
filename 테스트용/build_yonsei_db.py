@@ -71,8 +71,10 @@ def fis_departments():
     s = requests.get(FIS + "/faculty/dep_search.do", timeout=60).text
     out = []
     for box in re.findall(r'<div class="belong-box">(.*?)</dl>', s, re.S):
-        col = re.search(r"<dt><span>(.*?)<br", box, re.S)
-        col = html.unescape(re.sub(r"<[^>]+>", "", col.group(1))).strip() if col else ""
+        # 단과대 이름 뒤에 <br/>영문이 오는 곳과, 줄바꿈 없이 바로 영문이 붙는 곳(예: 교육과학대학College of ...)이 섞여 있음
+        col = re.search(r"<dt><span>(.*?)</span>", box, re.S)
+        col = html.unescape(re.sub(r"<[^>]+>", " ", col.group(1).split("<br")[0])).strip() if col else ""
+        col = (re.match(r"[가-힣·/()\s]+", col) or [col])[0].strip()
         for href, name in re.findall(r'<a [^>]*href="(/faculty/depMember\.do\?[^"]+)"[^>]*>(.*?)</a>', box, re.S):
             out.append({"col": col, "href": html.unescape(href), "name": html.unescape(re.sub(r"<[^>]+>", "", name)).strip()})
     return out
