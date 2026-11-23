@@ -59,7 +59,8 @@ def yonsei_list(db_tree, profiles=None):
                 item = {"name": p["name"], "eng": p.get("eng", ""), "col": col, "dept": dept,
                         "tags": p.get("tags") or [], "works": p.get("works")}
                 if p.get("oa_ids"):
-                    item.update(oa_id="|".join(p["oa_ids"]), yonsei=True, inst="Yonsei University")
+                    # kw·ckw: 비교할 때 교수님 본인 소속 문자열로 동명이인 논문을 거르는 학과·단과대 단어 (aff_filter.py)
+                    item.update(oa_id="|".join(p["oa_ids"]), yonsei=True, inst="Yonsei University", kw=p.get("kw") or [], ckw=p.get("ckw", ""))
                 out.append(item)
     return out
 

@@ -248,3 +248,31 @@
 
 /* 별자리 범례: 공저 선 */
 .lm .legend i.co-line{width:16px;height:2px;border-radius:1px;background:var(--A);vertical-align:3px}
+/* 별자리 도구: 이름 보기, 공저 있는 사람만, 확대·축소, 처음 모양으로 */
+.lm .skybar{flex-wrap:wrap;align-items:flex-start}
+.lm .skytools{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;margin-left:auto}
+.lm .skytools .ghost{background:color-mix(in srgb,var(--surface) 88%,transparent);backdrop-filter:blur(4px)}
+.lm .skytools .ghost.on{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.lm .skytools .icon{width:30px;padding:4px 0;font-size:15px;line-height:1}
+.lm canvas{touch-action:none}
+.lm .tip{width:240px}
+.lm .tip .x{position:absolute;right:6px;top:4px;border:0;background:none;font-size:18px;color:var(--faint);cursor:pointer;padding:2px 6px}
+.lm .tip .nb-h{font-size:12px;font-weight:600;margin-top:8px;color:var(--ink)}
+.lm .tip .nb-h span{font-weight:400;color:var(--faint);margin-left:4px}
+.lm .tip .nbs{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px;max-height:96px;overflow:auto}
+.lm .tip .nbtn{border:1px solid var(--line);background:var(--soft);border-radius:999px;padding:2px 8px;font-size:12px;color:var(--ink);cursor:pointer;display:inline-flex;align-items:center;gap:4px}
+.lm .tip .nbtn em{font-style:normal;color:var(--faint);font-size:11px}
+.lm .tip .nbtn.on{border-color:var(--ink)}
+.lm .tip .nbtn .yd{width:6px;height:6px;border-radius:50%;background:var(--A);display:inline-block}
+.lm .tip .more{font-size:12px;color:var(--faint);align-self:center}
+.lm .tip .acts{flex-wrap:wrap}
+.lm .tip .fbtn.on{background:var(--ink);color:var(--surface)}
+.lm .tip .yname{color:var(--tA)}
+/* 상위 연구자: 연세대 연구자는 배지 대신 이름 색과 왼쪽 가는 선으로만 */
+.lm .rk.yon-row{box-shadow:inset 3px 0 0 var(--A);padding-left:8px;margin-left:-8px}
+.lm .rk.yon-row .nm{color:var(--tA)}
+@media (max-width:640px){ .lm .skytools [data-sky="names"],.lm .skytools [data-sky="linked"]{font-size:11px;padding:4px 8px} .lm .canvasbox{height:420px} }
+.lm .dept-cols{margin-bottom:8px}
+.lm .dept-cols .chip.col{font-size:13px;padding:5px 11px}
+.lm .dept-cols + .dept-chips{padding-top:8px;border-top:1px dashed var(--line)}
+.lm .dots .cnt{font-size:12px;color:var(--sub);font-variant-numeric:tabular-nums}
