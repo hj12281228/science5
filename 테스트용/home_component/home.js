@@ -105,11 +105,16 @@ const HTML = `
   </div>
   <section class="sec-dept">
     <div class="sh"><h2>연세대 학과로 둘러보기</h2><p class="dept-cap"></p></div>
-    <div class="chips dept-cols" role="tablist" aria-label="단과대학"></div>
-    <div class="chips dept-chips"></div>
-    <div class="dept-names" role="list" aria-label="이 학과 교수님 (가나다순)"></div>
-    <div class="strip"><button class="nav l" data-act="prev" type="button" aria-label="이전">‹</button><button class="nav r" data-act="next" type="button" aria-label="다음">›</button></div>
-    <div class="dots"></div>
+    <div class="dept-browser">
+      <nav class="dcol" aria-label="단과대학"><div class="dh">단과대학</div><div class="dlist dept-cols"></div></nav>
+      <nav class="ddep" aria-label="학과"><div class="dh dep-h">학과</div><div class="dlist dept-chips"></div></nav>
+      <div class="dpane">
+        <div class="dh prof-h">교수님</div>
+        <div class="dept-names" role="list" aria-label="이 학과 교수님 (가나다순)"></div>
+        <div class="strip"><button class="nav l" data-act="prev" type="button" aria-label="이전">‹</button><button class="nav r" data-act="next" type="button" aria-label="다음">›</button></div>
+        <div class="dots"></div>
+      </div>
+    </div>
   </section>
   <section class="sec-field">
     <div class="sh"><h2>분야별 국내 연구자 별자리</h2><p>점 하나가 연구자 한 명, 선은 최근 3년 함께 논문을 쓴 사이예요. 클수록 논문이 많아요. 돌려 보고, 점을 끌어 떼어 놓고, 눌러서 공저자를 따라가 보세요.</p></div>
@@ -337,11 +342,23 @@ export default function (component) {
   function renderDept() {
     const curCol = UI.dept ? UI.dept.split('|')[0] : COLS[0];
     $('.dept-cap').textContent = `${COLS.length}개 단과대학 ${DEPTS.length}개 학과, 교수님 ${YON.length}명 (연세대 교원정보 기준)`;
-    $('.dept-cols').innerHTML = COLS.map((c) => `<button class="chip col ${c === curCol ? 'on' : ''}" type="button" role="tab" aria-selected="${c === curCol}" data-col="${esc(c)}">${esc(c)}</button>`).join('');
+    // 단과대학 → 학과 → 교수님: 왼쪽에서 오른쪽으로 좁혀 가는 세 칸 (앞의 두 칸은 목록, 마지막은 교수님 카드)
+    const colCount = {}; DEPTS.forEach((k) => { const c = k.split('|')[0]; colCount[c] = (colCount[c] || 0) + 1; });
+    $('.dept-cols').innerHTML = COLS.map((c) => `<button class="drow ${c === curCol ? 'on' : ''}" type="button" aria-current="${c === curCol}" data-col="${esc(c)}"><span>${esc(c)}</span><em>${colCount[c]}</em><i>›</i></button>`).join('');
     $('.dept-chips').innerHTML = DEPTS.filter((k) => k.split('|')[0] === curCol).map((k) => {
       const d = k.split('|')[1];
-      return `<button class="chip ${k === UI.dept ? 'on' : ''}" type="button" data-dept="${esc(k)}">${esc(d)}<em>${deptCount[k]}명</em></button>`;
+      return `<button class="drow ${k === UI.dept ? 'on' : ''}" type="button" aria-current="${k === UI.dept}" data-dept="${esc(k)}"><span>${esc(d)}</span><em>${deptCount[k]}</em><i>›</i></button>`;
     }).join('');
+    $('.dep-h').textContent = `${curCol} 학과`;
+    $('.prof-h').textContent = `${UI.dept ? UI.dept.split('|')[1] : ''} 교수님 ${deptCount[UI.dept] || 0}명`;
+    // 고른 줄이 목록 밖에 있으면 목록 안에서만 스크롤 (페이지는 움직이지 않게)
+    ['.dept-cols', '.dept-chips'].forEach((sel) => {
+      const box = $(sel), on = box.querySelector('.on');
+      if (!on) return;
+      const top = on.offsetTop - box.offsetTop, bot = top + on.offsetHeight;
+      if (top < box.scrollTop) box.scrollTop = top - 8;
+      else if (bot > box.scrollTop + box.clientHeight) box.scrollTop = bot - box.clientHeight + 8;
+    });
     const st = $('.strip');
     // 가나다순 이름 목록: 교수님이 많은 학과도 카드를 하나씩 넘기지 않고 바로 찾을 수 있게
     const list = YON.filter((y) => dkey(y) === UI.dept).sort((x, y) => x.name.localeCompare(y.name, 'ko'));
@@ -428,7 +445,7 @@ export default function (component) {
     const [y0, y1] = FS.window || [2023, 2025];
     body.innerHTML = `<p class="basis">국내 기관 논문이 ${FS.prev ? FS.prev[0] + '~' + FS.prev[1] + '년 대비 ' : ''}${y0}~${y1}년에 많이 늘어난 분야 순</p>
       <div class="chips">${chips}</div>${all}${subChips}
-      <div class="sky"><div class="canvasbox"><canvas aria-label="세부 분야별 연구자 별자리. 빈 곳을 끌어 돌려 보고, 점을 끌어 옮기거나 눌러서 함께 쓴 연구자를 따라가 볼 수 있어요. 같은 연구자 목록은 오른쪽 순위에 있어요." role="img"></canvas><div class="skybar"><span class="hint">빈 곳 끌기 = 돌리기 · 점 끌기 = 옮기기 · 점 누르기 = 공저자 보기</span><div class="skytools"><button class="ghost sm" type="button" data-sky="names">이름 보기</button><button class="ghost sm" type="button" data-sky="linked">공저 있는 사람만</button><button class="ghost sm icon" type="button" data-sky="out" aria-label="작게">−</button><button class="ghost sm icon" type="button" data-sky="in" aria-label="크게">+</button><button class="ghost sm" type="button" data-sky="clear" hidden>처음 모양으로</button></div></div><div class="legend"><span><i style="background:var(--A)"></i>연세대</span><span><i style="background:var(--dot)"></i>다른 국내 기관</span><span><i class="co-line"></i>함께 쓴 논문 (굵을수록 많이)</span></div></div>
+      <div class="sky"><div class="canvasbox"><canvas aria-label="세부 분야별 연구자 별자리. 빈 곳을 끌어 돌려 보고, 점을 끌어 옮기거나 눌러서 함께 쓴 연구자를 따라가 볼 수 있어요. 같은 연구자 목록은 오른쪽 순위에 있어요." role="img"></canvas><div class="skybar"><div class="skytools"><button class="ghost sm" type="button" data-sky="names">이름 보기</button><button class="ghost sm" type="button" data-sky="linked">공저 있는 사람만</button><button class="ghost sm icon" type="button" data-sky="out" aria-label="작게">−</button><button class="ghost sm icon" type="button" data-sky="in" aria-label="크게">+</button><button class="ghost sm" type="button" data-sky="clear" hidden>처음 모양으로</button></div></div><div class="legend"><span><i style="background:var(--A)"></i>연세대</span><span><i style="background:var(--dot)"></i>다른 국내 기관</span><span><i class="co-line"></i>함께 쓴 논문 (굵을수록 많이)</span></div></div>
       <div class="rank"><h3>${title}</h3><p class="cap">국내 기관 전체, ${y0}~${y1}년 논문 수 기준</p><div class="rank-list"></div><div class="src">출처: OpenAlex (${esc(FS.generated || '')} 집계)</div></div></div>`;
     renderRank();
     startSky();
@@ -606,15 +623,7 @@ export default function (component) {
         const tw = !reduce && L > 0.5 ? 1 + Math.sin(t / 700 + n.hx) * 0.06 : 1;
         n.sx = s.x; n.sy = s.y; n.sr = Math.max(1.6, n.r * tw * Math.max(0.85, st.scale) * st.zoom ** 0.6 * s.f);
         const col = n.p.yon ? C.A : C.other;
-        // 별빛: 가까운 점일수록 번짐이 큼
-        if (L > 0.5) {
-          const g = ctx.createRadialGradient(s.x, s.y, n.sr * 0.6, s.x, s.y, n.sr * 2.6);
-          g.addColorStop(0, alpha(col, 0.35 * A)); g.addColorStop(1, alpha(col, 0));
-          ctx.fillStyle = g; ctx.beginPath(); ctx.arc(s.x, s.y, n.sr * 2.6, 0, Math.PI * 2); ctx.fill();
-        }
         ctx.globalAlpha = A; ctx.fillStyle = col; ctx.beginPath(); ctx.arc(s.x, s.y, n.sr, 0, Math.PI * 2); ctx.fill();
-        // 가까운 쪽 위에 작은 하이라이트 → 구슬처럼 입체감
-        if (L > 0.5 && n.sr > 3.5) { ctx.globalAlpha = A * 0.55; ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(s.x - n.sr * 0.35, s.y - n.sr * 0.35, n.sr * 0.32, 0, Math.PI * 2); ctx.fill(); }
         ctx.globalAlpha = 1;
         const isA = sameP(slots.A, n.p), isB = sameP(slots.B, n.p), mk = st.marked.has(n);
         if (isA || isB || mk || hot === n || st.tipNode === n) {
@@ -835,7 +844,7 @@ export default function (component) {
       const dp = t.closest('[data-dept]');
       if (dp) { UI.dept = dp.dataset.dept; UI.idx = 0; S().renderDept(); return; }
       const cl = t.closest('[data-col]');
-      if (cl) { UI.dept = DEPTS.find((k) => k.split('|')[0] === cl.dataset.col) || UI.dept; UI.idx = 0; S().renderDept(); return; }
+      if (cl) { UI.dept = DEPTS.find((k) => k.split('|')[0] === cl.dataset.col) || UI.dept; UI.idx = 0; S().renderDept(); const dl = root.querySelector('.dept-chips'); if (dl) dl.scrollTop = 0; return; }
       const fc = t.closest('.fc');
       if (fc && !t.closest('button')) { UI.idx = +fc.dataset.idx; S().renderDept(); return; }
       const pk = t.closest('[data-pick]');
