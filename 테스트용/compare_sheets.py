@@ -227,9 +227,9 @@ CSS = """
 /* 인덱스 폴더: 지표 5장을 겹쳐 두고, 누르면 열림 (한 번에 한 장) */
 :root{interpolate-size:allow-keywords}
 .lm-folders{position:relative;padding-top:44px}
-/* 정면에서 보는 겹친 폴더. 그림자는 폴더+탭 모양 그대로 떨어지게 drop-shadow로 (탭 아래로 그림자가 비치지 않음) */
+/* 정면에서 보는 겹친 폴더. 그림자는 가벼운 box-shadow (filter:drop-shadow는 휴대폰에서 큰 장 전체를 따로 그려서 느려지고 화면이 끊겼음) */
 .lm-fold{position:relative;border:1px solid var(--line);border-radius:0 26px 26px 26px;margin-top:-2px;background:var(--fbg);
- filter:drop-shadow(0 -8px 14px rgba(0,0,0,.07));transition:transform .6s cubic-bezier(.16,1,.3,1),background-color .4s}
+ box-shadow:0 -6px 14px -6px rgba(0,0,0,.10);transition:transform .6s cubic-bezier(.16,1,.3,1),background-color .4s}
 .lm-fold:first-child{margin-top:0}
 .lm-fold:not([open]):hover{transform:translateY(-8px)}
 .lm-fold[open]{--fbg:var(--paper)}
@@ -279,6 +279,58 @@ CSS = """
  .h280{min-height:0}.h300{min-height:270px}.lm-mt{margin-top:40px}
  .lm-nm{font-size:28px}.lm-nm small{font-size:13px}
 }
+/* ---- 빈 공간 줄이기 (모든 화면): 아래 숫자 줄을 칸 바닥에 붙여 두던 절대 위치·최소 높이 대신 내용만큼만 ---- */
+.lm-t{display:flex;flex-direction:column}
+.lm-t > svg:not(.lm-ring){display:block;align-self:center}
+.lm-t:has(.lm-foot){padding-bottom:22px}
+.lm-foot{position:static;margin-top:auto;padding-top:18px}
+.h300,.h280{min-height:0}
+.lm-tile{min-height:0}
+.lm-big{padding-top:14px}
+/* ---- 노트북 한 화면: 열린 장 하나(탭+제목+칸들)가 화면 높이의 약 85~90%에 여유 있게 들어오게.
+   높이 예산 = 100vh - 앱 상단 60px. 칸 한 줄 목표 높이(--row)를 화면 높이로 정하고 큰 숫자·그래프를 거기에 맞춤.
+   너비도 화면 높이에 묶여 있어서(compare_page.py) 장 전체가 슬라이드처럼 같은 비율로 커지고 작아짐 ---- */
+@media (min-width:1101px){
+ .lm{--row:max(140px,calc(.40 * (100vh - 60px) - 76px))}
+ .lm-t.s12 > svg{max-height:calc(var(--row) - 96px)!important}
+ .lm-folders{padding-top:40px}
+ .lm-fold > summary{padding:16px 26px 30px;gap:12px}
+ .lm-fold[open] > summary{padding:12px 26px 8px}
+ .lm-fold[open] > summary .q{font-size:clamp(20px,min(2.2vw,3.6vh),32px)}
+ .lm-fbody{padding:0 26px 14px}
+ .lm-slidefoot{margin-top:10px;padding-top:6px}
+ .lm-g{gap:12px}
+ .lm-t{padding:16px 20px;border-radius:20px}
+ .lm-t:has(.lm-foot){padding-bottom:16px}
+ .lm .tag.hd .tt{gap:2px}
+ .lm .tag.hd .tt b{font-size:16px}
+ .lm .tag.hd .tt span{font-size:12.5px}
+ .lm-ring{right:18px;top:16px;width:min(110px,calc(var(--row) * .42));height:min(110px,calc(var(--row) * .42))}
+ .lm-ring + .tag.hd .tt{max-width:calc(100% - min(110px,calc(var(--row) * .42)) - 16px)}
+ .lm-huge{font-size:clamp(40px,min(6vw,calc(var(--row) * .3)),96px)}
+ .lm-huge u{font-size:.34em}
+ .lm-mt{margin-top:clamp(6px,calc(var(--row) * .05),20px)}
+ .lm-sub{margin-top:6px}
+ .lm-foot{padding-top:10px}
+ .lm-row b{font-size:clamp(18px,calc(var(--row) * .1),26px)}
+ .lm-inline{margin-top:clamp(6px,calc(var(--row) * .05),20px);gap:14px}
+ .lm-inline .lm-sub{margin-bottom:4px}
+ .lm .lm-t > svg:not(.lm-ring),.lm .lm-t svg[width="100%"]{max-height:calc(var(--row) - 78px);width:100%;margin-top:8px!important}
+ .lm-ppl{margin-top:10px;gap:3px}.lm-ppl svg{width:clamp(16px,calc(var(--row) * .1),28px);height:auto}
+ .lm-key{margin-top:8px}
+ .lm-vl{margin-top:8px}.lm-vl li{padding:4px 0}
+ .lm-vl li span,.lm-vl li b{font-size:clamp(14px,calc(var(--row) * .075),21px)}
+ .lm-split{margin-bottom:10px}.lm-split .bar{height:clamp(30px,calc(var(--row) * .17),48px)}
+ /* 05 꾸준한 논문: 신호등 + 두 잔디를 한 줄로, 꺾은선을 아래 한 줄로 (세 줄 → 두 줄) */
+ .lm-t.sig5{grid-column:span 4}.lm-t.grass5{grid-column:span 4}
+ .sig5 .lm-lights{grid-template-columns:1fr;gap:12px;margin-top:10px}
+ .sig5 .lm-light{gap:14px}.sig5 .lm-light .box{padding:7px 10px;gap:8px}
+ .sig5 .lm-light .box i{width:clamp(18px,calc(var(--row) * .1),28px);height:clamp(18px,calc(var(--row) * .1),28px)}
+ .sig5 .lm-light b{font-size:clamp(20px,calc(var(--row) * .11),28px)}.sig5 .lm-light p{font-size:12.5px;margin-top:2px!important}
+ .lm-grass{margin-top:10px;gap:3px;grid-template-columns:34px repeat(12,minmax(0,1fr))}
+ .lm-grass span{aspect-ratio:auto;height:clamp(10px,calc(var(--row) * .085),24px)}
+}
+@media (min-width:1101px) and (max-height:760px){.lm-vl li:nth-child(n+5){display:none}.lm-sub{font-size:11px}.lm-ring{display:none}.lm-ring + .tag.hd .tt{max-width:none}.sig5 .lm-light p{display:none}.sig5 .lm-lights{gap:8px}}
 </style>
 """
 
@@ -790,7 +842,7 @@ def sheet_cont(m):
         months = round(r["active_month_ratio"] * 60 / 100)
         gaps = ", ".join(map(str, r["gap_years"])) if r["gap_years"] else "없음"
         trend = f'{r["trend"]}배' if r["trend"] is not None else "판정 불가"
-        return (f'<div class="lm-t s6 {cls}"><div class="tag hd"><div class="tt"><b><i>LAB {slot}</i>논문이 나온 달</b><span>최근 60개월을 한 칸씩 · 진할수록 그 달 논문이 많아요</span></div></div>'
+        return (f'<div class="lm-t s6 grass5 {cls}"><div class="tag hd"><div class="tt"><b><i>LAB {slot}</i>논문이 나온 달</b><span>최근 60개월을 한 칸씩 · 진할수록 그 달 논문이 많아요</span></div></div>'
                 f'<div class="lm-inline"><div class="lm-huge {wt}">{r["active_month_ratio"]:.0f}<u>%</u></div>'
                 f'<div class="lm-sub">60개월 중 {months}개월 · 공백 연도 {gaps} · 최근 {trend}</div></div><div class="lm-grass">{cells}</div></div>')
 
@@ -832,7 +884,7 @@ def lights(a, b):
         c_on = dict(LAMPS)[sig]
         return (f'<div class="lm-light"><span class="sl">LAB {slot}</span><span class="box">{lamps}</span>'
                 f'<div><b style="color:{c_on}">{name}</b><p>{why}</p></div></div>')
-    return (f'<div class="lm-t s12 blk">{H5("꾸준함 신호등", "공백 연도와 최근 논문 추세로 매긴 신호 · 초록 꾸준함 / 노랑 주의 / 빨강 공백 많음")}'
+    return (f'<div class="lm-t s12 blk sig5">{H5("꾸준함 신호등", "공백 연도와 최근 논문 추세로 매긴 신호 · 초록 꾸준함 / 노랑 주의 / 빨강 공백 많음")}'
             f'<div class="lm-lights">{one("A", a)}{one("B", b)}</div></div>')
 
 
